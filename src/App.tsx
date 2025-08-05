@@ -1,6 +1,6 @@
 import './App.css'
 import {BrowserRouter, Route, Routes} from "react-router-dom";
-import MapPage from "./pages/MapPage.jsx";
+import MapPage from "./pages/MapPage.tsx";
 
 function App() {
 
