@@ -36,9 +36,9 @@ export default {
       pink: colors.pink,
       rose: colors.rose,
       primary: {
-        DEFAULT: '#74239e', // morado
-        light: '#74239e',   
-        dark: '#74239e',   
+        DEFAULT: '#601d82', // morado
+        light: '#7b24a6',
+        dark: '#4b1666',
       },
       secondary: {
         DEFAULT: '#f59e42', // verde
