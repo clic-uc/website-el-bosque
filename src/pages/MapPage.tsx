@@ -2,6 +2,8 @@ import "leaflet/dist/leaflet.css"
 import MapDisplay from "../components/map/MapDisplay.tsx";
 import {Map} from "../types/Map.tsx";
 import {AnyShape, Shape} from "../types/Shape.tsx";
+import SideBar from "../components/map/SideBar.tsx";
+import { useState } from "react";
 
 const MapPage = () => {
 
@@ -54,25 +56,53 @@ const MapPage = () => {
         drawable: true,
         shapes: dummyShapes
     }
+    const layers = [
+        { id: "poly", name: "Polígonos" },
+        { id: "line", name: "Líneas" },
+        { id: "point", name: "Puntos" }
+    ]
 
+    const [activeLayers, setActiveLayers] = useState<string[]>(layers.map((l) => l.id));
+
+      const handleToggleLayer = (id: string) => {
+        setActiveLayers((prev) =>
+        prev.includes(id) ? prev.filter((layer) => layer !== id) : [...prev, id]
+        );
+  };
     return (
+    <div className="flex w-screen h-screen">
+      {/* Sidebar */}
+      <SideBar
+        layers={layers}
+        activeLayers={activeLayers}
+        onToggleLayer={handleToggleLayer}
+      />
+
+      {/* Mapa */}
+      <div className="flex-1">
         <MapDisplay
-            map={dummyMap}
-            className={"w-[100vw] h-[100vh]"}
-            onCreateShape={(shape, success, errorCallback) => {
-                console.log("Shape created:", shape);
-                success();
-            }}
-            onUpdateShape={(shape, success, errorCallback) => {
-                console.log("Shape updated:", shape);
-                success();
-            }}
-            onDeleteShape={(shape, success, errorCallback) => {
-                console.log("Shape deleted:", shape);
-                success();
-            }}
+          map={{
+            ...dummyMap,
+            shapes: dummyMap.shapes.filter((s) => activeLayers.includes(s.type)), // 🔥 solo muestra los shapes de capas activas
+          }}
+          className="w-full h-full"
+          onCreateShape={(shape, success) => {
+            console.log("Shape created:", shape);
+            success();
+          }}
+          onUpdateShape={(shape, success) => {
+            console.log("Shape updated:", shape);
+            success();
+          }}
+          onDeleteShape={(shape, success) => {
+            console.log("Shape deleted:", shape);
+            success();
+          }}
         />
-    )
+      </div>
+    </div>
+  )
 }
+
 
 export default MapPage;
