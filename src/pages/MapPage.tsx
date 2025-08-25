@@ -83,7 +83,7 @@ const MapPage = () => {
         <MapDisplay
           map={{
             ...dummyMap,
-            shapes: dummyMap.shapes.filter((s) => activeLayers.includes(s.type)), // 🔥 solo muestra los shapes de capas activas
+            shapes: dummyMap.shapes.filter((s) => activeLayers.includes(s.type)), 
           }}
           className="w-full h-full"
           onCreateShape={(shape, success) => {

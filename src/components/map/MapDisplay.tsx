@@ -40,6 +40,9 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
     const [saveMode, setSaveMode] = useState<"create" | "update" | null>(null);
     const [error, setError] = useState<string | null>(null);
+    useEffect(() => {
+        setShapes(props.map.shapes || []);
+    }, [props.map.shapes]);
 
     const layerRefs = useRef<Record<string, any>>({});
 
