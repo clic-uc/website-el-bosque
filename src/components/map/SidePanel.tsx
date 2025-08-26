@@ -19,7 +19,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
     }, [shape]);
 
     return (
-        shape && <div
+        <div
             className={"flex flex-col-reverse min-h overflow-hidden absolute z-[1000] top-0 right-0 h-full w-[20rem] bg-white shadow-lg shadow-black p-4 transform transition-transform " + (open ? "translate-x-0" : "translate-x-full")}
         >
             <div className={"flex-none flex flex-row gap-2"}>
