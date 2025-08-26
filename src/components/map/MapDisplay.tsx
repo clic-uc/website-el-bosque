@@ -9,12 +9,14 @@ import SidePanel from "./SidePanel.tsx";
 import {v4} from "uuid";
 import {LatLng, type LeafletEventHandlerFnMap} from "leaflet";
 import DrawHooks from "../../hooks/useDrawHooks.tsx";
+import ShapeInput from "./ShapeInput.tsx";
 
 interface MapDisplayProps {
-    map: Map;
-    onCreateShape?: (shape: AnyShape, success: () => void, errorCallback: (error: string) => void) => void;
-    onUpdateShape?: (shape: AnyShape, success: () => void,  errorCallback: (error: string) => void) => void;
-    onDeleteShape?: (shapeId: string, success: () => void, errorCallback: (error: string) => void) => void;
+    maps: Map[];
+    activeMap: Map;
+    onCreateShape: (shape: AnyShape, success: (shape: AnyShape) => void, errorCallback: (error: string) => void) => void;
+    onUpdateShape: (shape: AnyShape, success: (shape: AnyShape) => void,  errorCallback: (error: string) => void) => void;
+    onDeleteShape: (shapeId: string, success: () => void, errorCallback: (error: string) => void) => void;
     className?: string;
 }
 
@@ -32,16 +34,22 @@ const parsePointLatLng = (latLng: LatLng) => {
     return [latLng.lat, latLng.lng] as [number, number];
 }
 
-const MapDisplay: React.FC<MapDisplayProps> = (props) => {
+const MapDisplay: React.FC<MapDisplayProps> = (
+    {maps, activeMap, onCreateShape, onUpdateShape, onDeleteShape, className},
+) => {
 
     const config = useConfig();
 
-    const [shapes, setShapes] = useState<AnyShape[]>(props.map.shapes || []);
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
-    const [saveMode, setSaveMode] = useState<"create" | "update" | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const layerRefs = useRef<Record<string, any>>({});
+    const featureGroupRef = useRef<L.FeatureGroup>(null);
+    const inputGroupRef = useRef<L.FeatureGroup>(null);
+
+    useEffect(() => {
+        layerRefs.current = {};
+    }, [activeMap.id]); // Clear layer refs when active map changes
 
     useEffect(() => {
         Object.keys(layerRefs.current).forEach(id => {
@@ -54,15 +62,6 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
         })
     }, [selectedShape]);
 
-    const drawOptions: typeof EditControl.prototype.props.draw = {
-        circle: false,
-        circlemarker: false,
-        rectangle: false,
-        marker: props.map.shapeType === "point" ? {} : false,
-        polyline: props.map.shapeType === "line" ? {} : false,
-        polygon: props.map.shapeType === "poly" ? {} : false,
-    }
-
     const disabledDrawOptions: typeof EditControl.prototype.props.draw = {
         circle: false,
         circlemarker: false,
@@ -73,7 +72,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
     }
 
     const mergedClassNames = twMerge(
-        props.className || "",
+        className || "",
         "relative overflow-hidden"
     );
 
@@ -84,52 +83,47 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
             ...selectedShape,
             attributes: newAttributes
         };
-
-        const fn = saveMode === "create" ? props.onCreateShape : props.onUpdateShape;
-
-        if (fn) {
-            fn(
-                newShape,
-                () => {
-                    setShapes(prev => prev.map(shape => shape.id === selectedShape.id ? newShape : shape));
-                    setSelectedShape(null);
-                },
-                (error) => setError(error)
-            )
-        } else {
-            setShapes(prev => prev.map(shape => shape.id === selectedShape.id ? newShape : shape));
-            setSelectedShape(null);
-        }
-
-    }, [selectedShape, saveMode, props.onCreateShape, props.onUpdateShape]);
-
+        
+        onUpdateShape(
+            newShape,
+            () => {
+                setSelectedShape(null);
+            },
+            (error) => setError(error)
+        )
+    }, [selectedShape, onUpdateShape]);
+    
     const cancel = useCallback(() => {
         setSelectedShape(null);
-    }, [selectedShape, saveMode]);
+    }, []);
 
     const eventHandlers: (shape: AnyShape) => LeafletEventHandlerFnMap = (shape) => ({
         click: () => {
             setSelectedShape(shape);
-            setSaveMode("update");
         },
         remove: () => {
-            if (props.onDeleteShape) {
-                props.onDeleteShape(
-                    shape.id,
-                    () => {
-                        setShapes(prev => prev.filter(s => s.id !== shape.id));
-                        setSelectedShape(null);
-                    },
-                    error => setError(error)
-                );
-            } else {
-                setShapes(prev => prev.filter(s => s.id !== shape.id));
-                setSelectedShape(null);
-            }
+            onDeleteShape(
+                shape.id,
+                () => {
+                    setSelectedShape(null);
+                    delete layerRefs.current[shape.id];
+                },
+                error => setError(error)
+            );
         },
     })
+    
+    const onInputCreate = useCallback((shape: AnyShape) => {
+        onCreateShape(
+            shape,
+            (newShape) => {
+                setSelectedShape(newShape);
+            },
+            (error) => setError(error)
+        );
+    }, [onCreateShape]);
 
-    const onCreate = useCallback(v => {
+    const onDrawCreate = useCallback(v => {
         const supportedTypes = ["polyline", "polygon", "marker"];
 
         if (!supportedTypes.includes(v.layerType)) {
@@ -173,17 +167,27 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
                 break;
             }
         }
-
-        setShapes(prev => [...prev, shape]);
-        setSelectedShape(shape);
-        setSaveMode("create");
-    }, []);
+        
+        onCreateShape(
+            shape,
+            (newShape) => {
+                setSelectedShape(newShape);
+            },
+            (error) => setError(error)
+        );
+        
+    }, [onCreateShape]);
 
     const onEditMove = useCallback(v => {
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.layer);
         if (!shapeId) return;
-        const shape = shapes.find(s => s.id === shapeId);
+        const shape = activeMap.shapes.find(s => s.id === shapeId);
         if (!shape || shape.type !== "point") return;
+
+        if (featureGroupRef.current) {
+            v.layer.remove();
+            featureGroupRef.current.removeLayer(v.layer);
+        }
 
         const newCoordinates = parsePointLatLng(v.layer.getLatLng());
 
@@ -191,37 +195,29 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
             ...shape,
             coordinates: newCoordinates,
         };
-
-        const undoEdit = () => {
-            setShapes(prev => prev.map(s => s.id === shapeId ? shape : s));
-            v.layer.setLatLng([shape.coordinates[0], shape.coordinates[1]]);
-        }
-
-        if (props.onUpdateShape) {
-            props.onUpdateShape(
-                updatedShape,
-                () => {
-                    setShapes(prev => prev.map(s => s.id === shapeId ? updatedShape : s));
-                    if (selectedShape && selectedShape.id === shapeId) {
-                        setSelectedShape(updatedShape);
-                    }
-                },
-                () => undoEdit()
-            );
-        } else {
-            setShapes(prev => prev.map(s => s.id === shapeId ? updatedShape : s));
-            if (selectedShape && selectedShape.id === shapeId) {
-                setSelectedShape(updatedShape);
-            }
-        }
-    }, [shapes, props.onUpdateShape, selectedShape]);
-
+        
+        onUpdateShape(
+            updatedShape,
+            (newShape) => {
+                if (selectedShape && selectedShape.id === shapeId) {
+                    setSelectedShape(newShape);
+                }
+            },
+            (error) => setError(error)
+        );
+        
+    }, [activeMap.shapes, onUpdateShape, selectedShape]);
+    
     const onEditVertex = useCallback(v => {
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.poly);
         if (!shapeId) return;
-        const shape = shapes.find(s => s.id === shapeId);
+        const shape = activeMap.shapes.find(s => s.id === shapeId);
         if (!shape || (shape.type !== "poly" && shape.type !== "line")) return;
 
+        if (featureGroupRef.current) {
+            v.layer.remove();
+            featureGroupRef.current.removeLayer(v.layer);
+        }
 
         let updatedShape: AnyShape;
         if (shape.type === "poly") {
@@ -235,32 +231,32 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
                 coordinates: parseLineLatLngs(v.poly.getLatLngs())
             }
         }
+        
+        onUpdateShape(
+            updatedShape,
+            (newShape) => {
+                if (selectedShape && selectedShape.id === shapeId) {
+                    setSelectedShape(newShape);
+                }
+            },
+            (error) => setError(error)
+        );
+    }, [activeMap.shapes, onUpdateShape, selectedShape]);
 
-        const undoEdit = () => {
-            setShapes(prev => prev.map(s => s.id === shapeId ? shape : s));
-            v.layer.setLatLngs(shape.coordinates);
-        }
+    const markerDrawOptions = {
+        ...disabledDrawOptions,
+        marker: {}
+    };
 
-        if (props.onUpdateShape) {
-            props.onUpdateShape(
-                updatedShape,
-                () => {
-                    setShapes(prev => prev.map(s => s.id === shapeId ? updatedShape : s));
-                    if (selectedShape && selectedShape.id === shapeId) {
-                        setSelectedShape(updatedShape);
-                    }
-                },
-                () => undoEdit()
-            );
-        } else {
-            setShapes(prev => prev.map(s => s.id === shapeId ? updatedShape : s));
-            if (selectedShape && selectedShape.id === shapeId) {
-                setSelectedShape(updatedShape);
-            }
-        }
-    }, [shapes, props.onUpdateShape, selectedShape]);
+    const pointDrawOptions = {
+        ...disabledDrawOptions,
+        polyline: {}
+    };
 
-    const featureGroupRef = useRef<L.FeatureGroup>(null);
+    const polyDrawOptions = {
+        ...disabledDrawOptions,
+        polygon: {}
+    };
 
     return (
         <div className={mergedClassNames}>
@@ -275,69 +271,102 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
                 <TileLayer
                     url={config.mapUrl}
                 />
-                <FeatureGroup ref={featureGroupRef}>
-                    <DrawHooks onCreate={onCreate} onEditMove={onEditMove} onEditVertex={onEditVertex} />
-                    <EditControl
-                        draw={selectedShape && props.map.drawable ? disabledDrawOptions : drawOptions}
-                        edit={{
-                            remove: selectedShape === null && props.map.drawable ? {} : false,
-                            edit: selectedShape === null && props.map.drawable ? {} : false,
-                        }}
-                        position={"topright"}
-                    />
-                    {shapes.map(shape => {
-                        switch (shape.type) {
-                            case "poly":
-                                return (
-                                    <Polygon
-                                        ref={el => {
-                                            if (el && layerRefs.current) {
-                                                layerRefs.current[shape.id] = el;
-                                            }
-                                        }}
-                                        key={shape.id}
-                                        positions={shape.coordinates}
-                                        eventHandlers={eventHandlers(shape)}
-                                    />
+                {maps.map(
+                    map => (
+                        <FeatureGroup
+                            key={map.id}
+                            ref={el => {
+                                if (el && map === activeMap) {
+                                    featureGroupRef.current = el;
+                            }}}
+                        >
+                            {
+                                map === activeMap && map.drawable && (
+                                    <>
+                                        <EditControl
+                                            onCreated={onDrawCreate}
+                                            onEditMove={onEditMove}
+                                            onEditVertex={onEditVertex}
+                                            draw={map === activeMap ?
+                                                map.shapeType === "point" ?
+                                                    markerDrawOptions :
+                                                    map.shapeType === "line" ?
+                                                        pointDrawOptions :
+                                                        polyDrawOptions :
+                                                disabledDrawOptions}
+                                            edit={map === activeMap ? {
+                                                remove: {},
+                                                edit: false,
+                                            } : {remove: false, edit: false}}
+                                            position={"topright"}
+                                        />
+                                    </>
                                 )
-                            case "line":
-                                return (
-                                    <Polyline
-                                        ref={el => {
-                                            if (el && layerRefs.current) {
-                                                layerRefs.current[shape.id] = el;
-                                            }
-                                        }}
-                                        key={shape.id}
-                                        positions={shape.coordinates}
-                                        eventHandlers={eventHandlers(shape)}
-                                    />
-                                )
-                            case "point":
-                                return (
-                                    <Marker
-                                        ref={el => {
-                                            if (el && layerRefs.current) {
-                                                layerRefs.current[shape.id] = el;
-                                            }
-                                        }}
-                                        key={shape.id}
-                                        position={shape.coordinates}
-                                        eventHandlers={eventHandlers(shape)}
-                                    >
-                                    </Marker>
-                                )
-                        }
-                    })}
-                </FeatureGroup>
+                            }
+                            {map.shapes.map(shape => {
+                                switch (shape.type) {
+                                    case "poly":
+                                        return (
+                                            <Polygon
+                                                ref={el => {
+                                                    if (el && layerRefs.current && map === activeMap) {
+                                                        layerRefs.current[shape.id] = el;
+                                                    }
+                                                }}
+                                                key={shape.id}
+                                                positions={shape.coordinates}
+                                                eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
+                                            />
+                                        )
+                                    case "line":
+                                        return (
+                                            <Polyline
+                                                ref={el => {
+                                                    if (el && layerRefs.current && map === activeMap) {
+                                                        layerRefs.current[shape.id] = el;
+                                                    }
+                                                }}
+                                                key={shape.id}
+                                                positions={shape.coordinates}
+                                                eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
+                                            />
+                                        )
+                                    case "point":
+                                        return (
+                                            <Marker
+                                                ref={el => {
+                                                    if (el && layerRefs.current && map === activeMap) {
+                                                        layerRefs.current[shape.id] = el;
+                                                    }
+                                                }}
+                                                key={shape.id}
+                                                position={shape.coordinates}
+                                                eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
+                                            >
+                                            </Marker>
+                                        )
+                                }
+                            })}
+                        </FeatureGroup>
+                    )
+                )}
             </MapContainer>
             <SidePanel
                 shape={selectedShape}
-                mapAttributes={props.map.attributes}
+                mapAttributes={activeMap.attributes}
                 open={selectedShape !== null}
                 cancel={cancel}
                 save={save}
             />
+            {
+                activeMap.drawable && !selectedShape && (
+                    <ShapeInput
+                        type={activeMap.shapeType}
+                        onCreate={onInputCreate}
+                        inputGroupRef={inputGroupRef}
+                    />
+                )
+            }
         </div>
     )
 }
