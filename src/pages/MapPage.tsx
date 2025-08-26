@@ -1,7 +1,8 @@
 import "leaflet/dist/leaflet.css"
 import MapDisplay from "../components/map/MapDisplay.tsx";
 import {Map} from "../types/Map.tsx";
-import {AnyShape} from "../types/Shape.tsx";
+import {AnyShape, Shape} from "../types/Shape.tsx";
+import SideBar from "../components/map/SideBar.tsx";
 import {useMemo, useState} from "react";
 
 const MapPage = () => {
@@ -10,7 +11,8 @@ const MapPage = () => {
         {
             id: "shape1_1",
             type: "poly",
-            coordinates: [[[-33.59220524202586, -70.76860376620324], [-33.5314107698844, -70.75860376620324], [-33.5314107698844, -70.64506335632365]]],
+            layerId: "poly",
+            coordinates: [[[-33.59220524202586, -70.75860376620324], [-33.5314107698844, -70.75860376620324], [-33.5314107698844, -70.64506335632365]]],
             attributes: {
                 "1": "Poly 1",
                 "2": 10,
@@ -21,6 +23,7 @@ const MapPage = () => {
         {
             id: "shape2_1",
             type: "line",
+            layerId: "line",
             coordinates: [[-33.59220524202586, -70.64506335632365], [-33.5314107698844, -70.75860376620324]],
             attributes: {
                 "1": "Line 2",
@@ -32,6 +35,7 @@ const MapPage = () => {
         {
             id: "shape3_1",
             type: "point",
+            layerId: "punto1",
             coordinates: [-33.59220524202586, -70.75860376620324],
             attributes: {
                 "1": "Point 3",
@@ -39,9 +43,40 @@ const MapPage = () => {
                 "3": true,
                 "4": "2023-10-03",
             }
+        },
+        {
+          id: "shape4",
+          type: "point",
+          layerId: "punto2",
+          coordinates: [-33.59220524202586, -70.64506335632365],
+          attributes: {
+            "1": "Point 4",
+            "2": 30,
+            "3": true,
+            "4": "2023-10-03",
+          }
         }
     ]
 
+    const dummyMap: Map = {
+        id: 1,
+        name: "Dummy Map",
+        attributes: [
+            {id: "1", name: "Name", type: "string"},
+            {id: "2", name: "Height", type: "number"},
+            {id: "3", name: "Is Active", type: "boolean"},
+            {id: "4", name: "Created At", type: "date"},
+        ],
+        shapeType: "line",
+        drawable: true,
+        shapes: dummyShapes
+    }
+    const layers = [
+        { id: "poly", name: "Polígonos" },
+        { id: "line", name: "Líneas" },
+        { id: "punto1", name: "Punto1" },
+        { id: "punto2", name: "Punto 2" }
+    ]
     const dummyShapes2: AnyShape[] = [
         {
             id: "shape1_2",
@@ -117,7 +152,24 @@ const MapPage = () => {
     const activeMap = dummyMap1;
     const setActiveMap = setDummyMap1;
 
+    const [activeLayers, setActiveLayers] = useState<string[]>(layers.map((l) => l.id));
+
+      const handleToggleLayer = (id: string) => {
+        setActiveLayers((prev) =>
+        prev.includes(id) ? prev.filter((layer) => layer !== id) : [...prev, id]
+        );
+  };
     return (
+    <div className="flex w-screen h-screen">
+      {/* Sidebar */}
+      <SideBar
+        layers={layers}
+        activeLayers={activeLayers}
+        onToggleLayer={handleToggleLayer}
+      />
+
+      {/* Mapa */}
+      <div className="flex-1">
         <MapDisplay
             maps={maps}
             activeMap={activeMap}
@@ -153,7 +205,10 @@ const MapPage = () => {
                 success();
             }}
         />
-    )
+      </div>
+    </div>
+  )
 }
+
 
 export default MapPage;
