@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import {useEffect} from "react";
 import {useMap} from "react-leaflet";
 
 interface DrawHooksProps {
@@ -7,19 +7,19 @@ interface DrawHooksProps {
     onEditVertex: (v) => void;
 }
 
-const DrawHooks: React.FC<DrawHooksProps> = (props) => {
+const DrawHooks: React.FC<DrawHooksProps> = ({onCreate, onEditVertex, onEditMove}) => {
 
     const map = useMap();
 
     useEffect(() => {
-        map.on('draw:created', props.onCreate);
-        map.on('draw:editmove', props.onEditMove);
-        map.on('draw:editvertex', props.onEditVertex);
+        map.on('draw:created', onCreate);
+        map.on('draw:editmove', onEditMove);
+        map.on('draw:editvertex', onEditVertex);
 
         return () => {
-            map.off('draw:created', props.onCreate);
-            map.off('draw:editmove', props.onEditMove);
-            map.off('draw:editvertex', props.onEditVertex);
+            map.off('draw:created', onCreate);
+            map.off('draw:editmove', onEditMove);
+            map.off('draw:editvertex', onEditVertex);
         };
     })
 
