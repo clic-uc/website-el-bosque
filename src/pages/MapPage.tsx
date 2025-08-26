@@ -58,19 +58,6 @@ const MapPage = () => {
         }
     ]
 
-    const dummyMap: Map = {
-        id: 1,
-        name: "Dummy Map",
-        attributes: [
-            {id: "1", name: "Name", type: "string"},
-            {id: "2", name: "Height", type: "number"},
-            {id: "3", name: "Is Active", type: "boolean"},
-            {id: "4", name: "Created At", type: "date"},
-        ],
-        shapeType: "line",
-        drawable: true,
-        shapes: dummyShapes
-    }
     const layers = [
         { id: "poly", name: "Polígonos" },
         { id: "line", name: "Líneas" },
@@ -80,6 +67,7 @@ const MapPage = () => {
     const dummyShapes2: AnyShape[] = [
         {
             id: "shape1_2",
+            layerId: "poly",
             type: "poly",
             coordinates: [[[-33.67220724202586, -70.75860376620324], [-33.5314107698844, -70.75860376620324], [-33.5314107698844, -70.64506335632365]]],
             attributes: {
@@ -91,6 +79,7 @@ const MapPage = () => {
         },
         {
             id: "shape2_2",
+            layerId: "line",
             type: "line",
             coordinates: [[-33.61220524202586, -70.64507335632365], [-33.5414107698844, -70.75860376620324]],
             attributes: {
@@ -102,6 +91,7 @@ const MapPage = () => {
         },
         {
             id: "shape3_2",
+            layerId: "punto1",
             type: "point",
             coordinates: [-33.62220724202586, -70.75861376620324],
             attributes: {

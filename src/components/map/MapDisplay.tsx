@@ -42,10 +42,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
 
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
     const [error, setError] = useState<string | null>(null);
-    useEffect(() => {
-        setShapes(props.map.shapes || []);
-    }, [props.map.shapes]); 
-
+    
     const layerRefs = useRef<Record<string, any>>({});
     const featureGroupRef = useRef<L.FeatureGroup>(null);
     const inputGroupRef = useRef<L.FeatureGroup>(null);
@@ -126,7 +123,9 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         );
     }, [onCreateShape]);
 
-    const onDrawCreate = useCallback(v => {
+    // `v` is the event object from react-leaflet-draw. Use `any` here to avoid
+    // deep typings; keep implementation unchanged.
+    const onDrawCreate = useCallback((v: any) => {
         const supportedTypes = ["polyline", "polygon", "marker"];
 
         if (!supportedTypes.includes(v.layerType)) {
@@ -184,7 +183,8 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         
     }, [onCreateShape]);
 
-    const onEditMove = useCallback(v => {
+    // `v` is the edit event from react-leaflet-draw
+    const onEditMove = useCallback((v: any) => {
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.layer);
         if (!shapeId) return;
         const shape = activeMap.shapes.find(s => s.id === shapeId);
@@ -214,7 +214,8 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         
     }, [activeMap.shapes, onUpdateShape, selectedShape]);
     
-    const onEditVertex = useCallback(v => {
+    // `v` is the vertex edit event from react-leaflet-draw
+    const onEditVertex = useCallback((v: any) => {
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.poly);
         if (!shapeId) return;
         const shape = activeMap.shapes.find(s => s.id === shapeId);
