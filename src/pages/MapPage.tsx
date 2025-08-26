@@ -11,6 +11,7 @@ const MapPage = () => {
         {
             id: "shape1",
             type: "poly",
+            layerId: "poly",
             coordinates: [[[-33.59220524202586, -70.75860376620324], [-33.5314107698844, -70.75860376620324], [-33.5314107698844, -70.64506335632365]]],
             attributes: {
                 "1": "Poly 1",
@@ -22,6 +23,7 @@ const MapPage = () => {
         {
             id: "shape2",
             type: "line",
+            layerId: "line",
             coordinates: [[-33.59220524202586, -70.64506335632365], [-33.5314107698844, -70.75860376620324]],
             attributes: {
                 "1": "Line 2",
@@ -33,6 +35,7 @@ const MapPage = () => {
         {
             id: "shape3",
             type: "point",
+            layerId: "punto1",
             coordinates: [-33.59220524202586, -70.75860376620324],
             attributes: {
                 "1": "Point 3",
@@ -40,6 +43,18 @@ const MapPage = () => {
                 "3": true,
                 "4": "2023-10-03",
             }
+        },
+        {
+          id: "shape4",
+          type: "point",
+          layerId: "punto2",
+          coordinates: [-33.59220524202586, -70.64506335632365],
+          attributes: {
+            "1": "Point 4",
+            "2": 30,
+            "3": true,
+            "4": "2023-10-03",
+          }
         }
     ]
 
@@ -59,7 +74,8 @@ const MapPage = () => {
     const layers = [
         { id: "poly", name: "Polígonos" },
         { id: "line", name: "Líneas" },
-        { id: "point", name: "Puntos" }
+        { id: "punto1", name: "Punto1" },
+        { id: "punto2", name: "Punto 2" }
     ]
 
     const [activeLayers, setActiveLayers] = useState<string[]>(layers.map((l) => l.id));
@@ -83,7 +99,7 @@ const MapPage = () => {
         <MapDisplay
           map={{
             ...dummyMap,
-            shapes: dummyMap.shapes.filter((s) => activeLayers.includes(s.type)), 
+            shapes: dummyMap.shapes.filter((s) => activeLayers.includes(s.layerId)), 
           }}
           className="w-full h-full"
           onCreateShape={(shape, success) => {

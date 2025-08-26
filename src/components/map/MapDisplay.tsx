@@ -42,7 +42,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
     const [error, setError] = useState<string | null>(null);
     useEffect(() => {
         setShapes(props.map.shapes || []);
-    }, [props.map.shapes]);
+    }, [props.map.shapes]); 
 
     const layerRefs = useRef<Record<string, any>>({});
 
@@ -151,6 +151,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
             case "polygon": {
                 shape = {
                     type: "poly",
+                    layerId: "",
                     id: v4(),
                     coordinates: parsePolyLatLngs(v.layer.getLatLngs()),
                     attributes: {}
@@ -160,6 +161,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
             case "polyline": {
                 shape = {
                     type: "line",
+                    layerId: "",
                     id: v4(),
                     coordinates: parseLineLatLngs(v.layer.getLatLngs()),
                     attributes: {}
@@ -169,6 +171,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (props) => {
             default: {
                 shape = {
                     type: "point",
+                    layerId: "",
                     id: v4(),
                     coordinates: parsePointLatLng(v.layer.getLatLng()),
                     attributes: {}
