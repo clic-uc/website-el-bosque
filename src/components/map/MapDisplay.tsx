@@ -14,6 +14,7 @@ import ShapeInput from "./ShapeInput.tsx";
 interface MapDisplayProps {
     maps: Map[];
     activeMap: Map;
+    activeMaps?: number[];
     onCreateShape: (shape: AnyShape, success: (shape: AnyShape) => void, errorCallback: (error: string) => void) => void;
     onUpdateShape: (shape: AnyShape, success: (shape: AnyShape) => void,  errorCallback: (error: string) => void) => void;
     onDeleteShape: (shapeId: string, success: () => void, errorCallback: (error: string) => void) => void;
@@ -35,7 +36,7 @@ const parsePointLatLng = (latLng: LatLng) => {
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = (
-    {maps, activeMap, onCreateShape, onUpdateShape, onDeleteShape, className},
+    {maps, activeMap, activeMaps, onCreateShape, onUpdateShape, onDeleteShape, className},
 ) => {
 
     const config = useConfig();
@@ -278,40 +279,37 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 <TileLayer
                     url={config.mapUrl}
                 />
-                {maps.map(
-                    map => (
-                        <FeatureGroup
-                            key={map.id}
-                            ref={el => {
-                                if (el && map === activeMap) {
-                                    featureGroupRef.current = el;
-                            }}}
-                        >
-                            {
-                                map === activeMap && map.drawable && (
-                                    <>
-                                        <EditControl
-                                            onCreated={onDrawCreate}
-                                            onEditMove={onEditMove}
-                                            onEditVertex={onEditVertex}
-                                            draw={map === activeMap ?
-                                                map.shapeType === "point" ?
-                                                    markerDrawOptions :
-                                                    map.shapeType === "line" ?
-                                                        pointDrawOptions :
-                                                        polyDrawOptions :
-                                                disabledDrawOptions}
-                                            edit={map === activeMap ? {
-                                                remove: {},
-                                                edit: false,
-                                            } : {remove: false, edit: false}}
-                                            position={"topright"}
-                                        />
-                                    </>
-                                )
-                            }
-                            {map.shapes.map(shape => {
-                                switch (shape.type) {
+                {maps.filter(map => !activeMaps || activeMaps.includes(map.id)).map(map => (
+                    <FeatureGroup
+                        key={map.id}
+                        ref={el => {
+                            if (el && map === activeMap) {
+                                featureGroupRef.current = el;
+                        }}}
+                    >
+                        {
+                            map === activeMap && map.drawable && (
+                                <>
+                                    <EditControl
+                                        onCreated={onDrawCreate}
+                                        onEditMove={onEditMove}
+                                        onEditVertex={onEditVertex}
+                                        draw={map.shapeType === "point" ?
+                                            markerDrawOptions :
+                                            map.shapeType === "line" ?
+                                                pointDrawOptions :
+                                                polyDrawOptions}
+                                        edit={{
+                                            remove: {},
+                                            edit: false,
+                                        }}
+                                        position={"topright"}
+                                    />
+                                </>
+                            )
+                        }
+                        {map.shapes.map(shape => {
+                                    switch (shape.type) {
                                     case "poly":
                                         return (
                                             <Polygon
@@ -354,9 +352,8 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                                         )
                                 }
                             })}
-                        </FeatureGroup>
-                    )
-                )}
+                    </FeatureGroup>
+                ))}
             </MapContainer>
             <SidePanel
                 shape={selectedShape}

@@ -8,6 +8,12 @@ export interface Map {
     drawable: boolean;
     shapeType: "point" | "line" | "poly";
     shapes: AnyShape[];
+    layers: Layer[];
+}
+
+export type Layer = {
+    id: string;
+    name: string;
 }
 
 export type Attribute = {

@@ -58,12 +58,6 @@ const MapPage = () => {
         }
     ]
 
-    const layers = [
-        { id: "poly", name: "Polígonos" },
-        { id: "line", name: "Líneas" },
-        { id: "punto1", name: "Punto1" },
-        { id: "punto2", name: "Punto 2" }
-    ]
     const dummyShapes2: AnyShape[] = [
         {
             id: "shape1_2",
@@ -116,7 +110,13 @@ const MapPage = () => {
             department: "edificacion",
             shapeType: "point",
             drawable: true,
-            shapes: dummyShapes1
+            shapes: dummyShapes1,
+            layers: [
+                { id: "poly", name: "Polígonos" },
+                { id: "line", name: "Líneas" },
+                { id: "punto1", name: "Punto1" },
+                { id: "punto2", name: "Punto 2" }
+            ]
         }
     );
 
@@ -133,27 +133,63 @@ const MapPage = () => {
             department: "edificacion",
             shapeType: "line",
             drawable: true,
-            shapes: dummyShapes2
+            shapes: dummyShapes2,
+            layers: [
+                { id: "poly", name: "Polígonos Map 2" },
+                { id: "line", name: "Líneas Map 2" },
+                { id: "punto1", name: "Punto1 Map 2" }
+            ]
         }
     );
 
     const maps = useMemo(() => [dummyMap1, dummyMap2], [dummyMap1, dummyMap2]);
 
-    const activeMap = dummyMap1;
-    const setActiveMap = setDummyMap1;
+    // Estado para mapas activos (múltiples)
+    const [activeMaps, setActiveMaps] = useState<number[]>([1]); // Por defecto solo el primer mapa
+    
+    // Estado para capas activas por mapa (objeto donde la clave es el ID del mapa)
+    const [activeLayers, setActiveLayers] = useState<Record<number, string[]>>({
+        1: dummyMap1.layers.map((l) => l.id),
+        2: dummyMap2.layers.map((l) => l.id)
+    });
 
-    const [activeLayers, setActiveLayers] = useState<string[]>(layers.map((l) => l.id));
-
-      const handleToggleLayer = (id: string) => {
-        setActiveLayers((prev) =>
-        prev.includes(id) ? prev.filter((layer) => layer !== id) : [...prev, id]
+    const handleToggleMap = (id: number) => {
+        setActiveMaps((prev) =>
+            prev.includes(id) ? prev.filter((mapId) => mapId !== id) : [...prev, id]
         );
-  };
+    };
+
+    const handleToggleLayer = (mapId: number, layerId: string) => {
+        setActiveLayers((prev) => ({
+            ...prev,
+            [mapId]: prev[mapId]?.includes(layerId) 
+                ? prev[mapId].filter((layer) => layer !== layerId) 
+                : [...(prev[mapId] || []), layerId]
+        }));
+    };
+    
+    const mapsForDisplay = maps.map(map => ({
+        ...map,
+        shapes: map.shapes.filter(shape => activeLayers[map.id]?.includes(shape.layerId) || false)
+    }));
+    
+    const activeMapsData = maps.filter(map => activeMaps.includes(map.id));
+    
+    const activeMap = activeMapsData[0] || maps[0];
+    
+    const getActiveMapSetter = () => {
+        if (!activeMap) return setDummyMap1;
+        return activeMap.id === 1 ? setDummyMap1 : setDummyMap2;
+    };
+    const setActiveMap = getActiveMapSetter();
+    
     return (
     <div className="flex w-screen h-screen">
       {/* Sidebar */}
       <SideBar
-        layers={layers}
+        maps={maps}
+        activeMaps={activeMaps}
+        onToggleMap={handleToggleMap}
         activeLayers={activeLayers}
         onToggleLayer={handleToggleLayer}
       />
@@ -161,8 +197,9 @@ const MapPage = () => {
       {/* Mapa */}
       <div className="flex-1">
         <MapDisplay
-            maps={maps}
+            maps={mapsForDisplay}
             activeMap={activeMap}
+            activeMaps={activeMaps}
             className={"w-[100vw] h-[100vh]"}
             onCreateShape={(shape, success, errorCallback) => {
                 console.log("Shape created:", shape);
@@ -173,7 +210,13 @@ const MapPage = () => {
             }}
             onUpdateShape={(shape, success, errorCallback) => {
                 console.log("Shape updated:", shape);
-                const index = activeMap.shapes.findIndex(s => s.id === shape.id);
+                // Buscar en el mapa original (no filtrado) para obtener el índice correcto
+                const originalMap = maps.find(m => m.id === activeMap.id);
+                if (!originalMap) {
+                    errorCallback("Map not found");
+                    return;
+                }
+                const index = originalMap.shapes.findIndex(s => s.id === shape.id);
                 if (index === -1) {
                     errorCallback("Shape not found");
                     return;
@@ -181,6 +224,7 @@ const MapPage = () => {
                 setActiveMap(
                     prev => {
                         const newShapes = [...prev.shapes];
+                        newShapes[index] = shape;
                         newShapes[index] = shape;
                         return {...prev, shapes: newShapes};
                     }
