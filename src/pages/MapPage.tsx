@@ -97,10 +97,10 @@ const MapPage = () => {
         }
     ]
 
-    const [dummyMap1, setDummyMap1] = useState<Map>(
+    const [edificacionMap, setEdificacionMap] = useState<Map>(
         {
             id: 1,
-            name: "Dummy Map",
+            name: "Edificación y Urbanismo",
             attributes: [
                 {id: "1", name: "Name", type: "string"},
                 {id: "2", name: "Height", type: "number"},
@@ -120,37 +120,82 @@ const MapPage = () => {
         }
     );
 
-    const [dummyMap2, setDummyMap2] = useState<Map>(
+    const [ejecucionMap, setEjecucionMap] = useState<Map>(
         {
             id: 2,
-            name: "Dummy Map 2",
+            name: "Ejecución de Obras",
             attributes: [
                 {id: "1", name: "Name", type: "string"},
                 {id: "2", name: "Capacity", type: "number"},
                 {id: "3", name: "Is Active", type: "boolean"},
                 {id: "4", name: "Updated At", type: "date"},
             ],
-            department: "edificacion",
+            department: "ejecucion",
             shapeType: "line",
             drawable: true,
             shapes: dummyShapes2,
             layers: [
-                { id: "poly", name: "Polígonos Map 2" },
-                { id: "line", name: "Líneas Map 2" },
-                { id: "punto1", name: "Punto1 Map 2" }
+                { id: "poly", name: "Polígonos de Obras" },
+                { id: "line", name: "Líneas de Construcción" },
+                { id: "punto1", name: "Punto1 de Obras" }
             ]
         }
     );
 
-    const maps = useMemo(() => [dummyMap1, dummyMap2], [dummyMap1, dummyMap2]);
+    const [emergenciasMap, setEmergenciasMap] = useState<Map>(
+        {
+            id: 3,
+            name: "Emergencias",
+            attributes: [
+                {id: "1", name: "Emergency Type", type: "string"},
+                {id: "2", name: "Severity", type: "number"},
+                {id: "3", name: "Is Active", type: "boolean"},
+                {id: "4", name: "Reported At", type: "date"},
+            ],
+            department: "emergencias",
+            shapeType: "point",
+            drawable: true,
+            shapes: [],
+            layers: [
+                { id: "emergency_points", name: "Puntos de Emergencia" },
+                { id: "alert_zones", name: "Zonas de Alerta" }
+            ]
+        }
+    );
+
+    const [viviendaMap, setViviendaMap] = useState<Map>(
+        {
+            id: 4,
+            name: "Vivienda",
+            attributes: [
+                {id: "1", name: "Property Type", type: "string"},
+                {id: "2", name: "Units", type: "number"},
+                {id: "3", name: "Is Available", type: "boolean"},
+                {id: "4", name: "Listed At", type: "date"},
+            ],
+            department: "vivienda",
+            shapeType: "poly",
+            drawable: true,
+            shapes: [],
+            layers: [
+                { id: "housing_poly", name: "Polígonos de Vivienda" },
+                { id: "development_sites", name: "Sitios de Desarrollo" },
+                { id: "rental_units", name: "Unidades de Renta" }
+            ]
+        }
+    );
+
+    const maps = useMemo(() => [edificacionMap, ejecucionMap, emergenciasMap, viviendaMap], [edificacionMap, ejecucionMap, emergenciasMap, viviendaMap]);
 
     // Estado para mapas activos (múltiples)
-    const [activeMaps, setActiveMaps] = useState<number[]>([1]); // Por defecto solo el primer mapa
+    const [activeMaps, setActiveMaps] = useState<number[]>([1, 2, 3, 4]); // Por defecto todos los mapas activos
     
     // Estado para capas activas por mapa (objeto donde la clave es el ID del mapa)
     const [activeLayers, setActiveLayers] = useState<Record<number, string[]>>({
-        1: dummyMap1.layers.map((l) => l.id),
-        2: dummyMap2.layers.map((l) => l.id)
+        1: [], // No layers active by default
+        2: [], // No layers active by default
+        3: [], // No layers active by default
+        4: []  // No layers active by default
     });
 
     const handleToggleMap = (id: number) => {
@@ -178,8 +223,14 @@ const MapPage = () => {
     const activeMap = activeMapsData[0] || maps[0];
     
     const getActiveMapSetter = () => {
-        if (!activeMap) return setDummyMap1;
-        return activeMap.id === 1 ? setDummyMap1 : setDummyMap2;
+        if (!activeMap) return setEdificacionMap;
+        switch (activeMap.id) {
+            case 1: return setEdificacionMap;
+            case 2: return setEjecucionMap;
+            case 3: return setEmergenciasMap;
+            case 4: return setViviendaMap;
+            default: return setEdificacionMap;
+        }
     };
     const setActiveMap = getActiveMapSetter();
     
