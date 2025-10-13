@@ -115,6 +115,8 @@ export interface PaginationQueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  mapId?: number;
+  hasCoordinates?: boolean;
 }
 
 // Import/Bulk

@@ -10,42 +10,46 @@ import { transformBackendMapToFrontend } from "../utils/mapTransformers";
 const MapPage = () => {
   // Fetch maps from backend
   const { data: backendMaps, isLoading: mapsLoading, error: mapsError } = useMaps();
-  
-  // Fetch records from backend (limited to 100 per page by backend)
-  // TODO: Implementar carga por mapa activo o paginación incremental
-  const { data: recordsData, isLoading: recordsLoading, error: recordsError } = useRecords({ 
-    page: 1, 
-    limit: 100
-  });
 
   const maps = useMemo(() => {
     if (!backendMaps) return [];
     return backendMaps.map(transformBackendMapToFrontend);
   }, [backendMaps]);
 
+  // State: Mapas activos (inicialmente vacío - el usuario debe seleccionar)
   const [activeMaps, setActiveMaps] = useState<number[]>([]);
+  
+  // State: Shapes creados localmente por el usuario (no persistidos aún en backend)
   const [localShapes, setLocalShapes] = useState<Record<number, AnyShape[]>>({});
 
-  const isLoading = mapsLoading || recordsLoading;
-  const error = mapsError || recordsError;
+  // Fetch records SOLO para los mapas activos con coordenadas válidas
+  const shouldFetchRecords = activeMaps.length > 0;
+  const firstActiveMapId = activeMaps[0];
+  
+  // TODO: Mejorar para fetchear records de TODOS los mapas activos, no solo el primero
+  // Opciones: 1) Múltiples queries paralelas, 2) Backend soporta multiple mapIds
+  const { data: recordsData } = useRecords(
+    shouldFetchRecords 
+      ? { 
+          mapId: firstActiveMapId,
+          hasCoordinates: true,
+          limit: 100 
+        }
+      : undefined
+  );
 
-  useMemo(() => {
-    if (maps.length > 0 && activeMaps.length === 0) {
-      setActiveMaps(maps.map((m) => m.id));
-    }
-  }, [maps, activeMaps.length]);
-
-  // Transform records to shapes, associating each record with its correct maps
+  // Transform records to shapes
+  // layerId ahora = mapId (corrigiendo el malentendido original)
   const shapesFromRecords = useMemo(() => {
     if (!recordsData?.data) return {};
     
     const shapesByMap: Record<number, AnyShape[]> = {};
     
     recordsData.data.forEach((record) => {
-      // Solo procesar records con coordenadas
+      // El backend ya filtró por hasCoordinates, pero doble check por seguridad
       if (!record.lat || !record.lon) return;
       
-      // Si el record tiene recordAttributes, asociarlo con los mapas específicos
+      // Cada record puede estar asociado a múltiples mapas via recordAttributes
       if (record.recordAttributes && record.recordAttributes.length > 0) {
         record.recordAttributes.forEach((ra) => {
           if (!shapesByMap[ra.mapId]) {
@@ -53,21 +57,18 @@ const MapPage = () => {
           }
           
           shapesByMap[ra.mapId].push({
-            id: `record-${record.id}-map-${ra.mapId}`,
-            type: "point",
-            layerId: "records", // layerId ya no es usado para filtrado, solo como identificador
+            id: `record-${record.id}`,
+            type: "point", // TODO: Soportar line y poly cuando existan en el backend
+            layerId: ra.mapId.toString(), // ✅ layerId = mapId (corregido)
             coordinates: [record.lat, record.lon],
             attributes: {
               recordId: record.id,
               roleId: record.roleId || "",
-              // Atributos específicos de este record en este mapa
-              ...ra.attributes,
+              ...ra.attributes, // Atributos específicos para este mapa
             },
           });
         });
       }
-      // Si no tiene recordAttributes, no lo mostramos en ningún mapa
-      // (esto evita la duplicación masiva anterior)
     });
     
     return shapesByMap;
@@ -157,7 +158,8 @@ const MapPage = () => {
     success();
   };
 
-  if (isLoading) {
+  // Loading states
+  if (mapsLoading) {
     return (
       <div className="flex items-center justify-center w-screen h-screen">
         <div className="text-center">
@@ -168,12 +170,12 @@ const MapPage = () => {
     );
   }
 
-  if (error) {
+  if (mapsError) {
     return (
       <div className="flex items-center justify-center w-screen h-screen">
         <div className="text-center">
           <p className="text-lg text-red-500 font-semibold">Error al cargar mapas</p>
-          <p className="text-sm text-gray-600 mt-2">{error.message}</p>
+          <p className="text-sm text-gray-600 mt-2">{mapsError.message}</p>
         </div>
       </div>
     );
