@@ -23,25 +23,23 @@ const MapPage = () => {
   const [localShapes, setLocalShapes] = useState<Record<number, AnyShape[]>>({});
 
   // Fetch records SOLO para los mapas activos con coordenadas válidas
-  const shouldFetchRecords = activeMaps.length > 0;
   const firstActiveMapId = activeMaps[0];
   
   // TODO: Mejorar para fetchear records de TODOS los mapas activos, no solo el primero
   // Opciones: 1) Múltiples queries paralelas, 2) Backend soporta multiple mapIds
-  const { data: recordsData } = useRecords(
-    shouldFetchRecords 
-      ? { 
-          mapId: firstActiveMapId,
-          hasCoordinates: true,
-          limit: 100 
-        }
-      : undefined
-  );
+  const { data: recordsData } = useRecords({ 
+    mapId: firstActiveMapId,
+    hasCoordinates: true,
+    limit: 100 
+  });
 
   // Transform records to shapes
   // layerId ahora = mapId (corrigiendo el malentendido original)
   const shapesFromRecords = useMemo(() => {
     if (!recordsData?.data) return {};
+    
+    console.log('📊 Records recibidos del backend:', recordsData.data.length);
+    console.log('📊 Primer record:', recordsData.data[0]);
     
     const shapesByMap: Record<number, AnyShape[]> = {};
     
@@ -51,7 +49,21 @@ const MapPage = () => {
       
       // Cada record puede estar asociado a múltiples mapas via recordAttributes
       if (record.recordAttributes && record.recordAttributes.length > 0) {
-        record.recordAttributes.forEach((ra) => {
+        record.recordAttributes.forEach((ra, index) => {
+          // Validación defensiva: asegurar que ra existe y tiene mapId
+          if (!ra || !ra.mapId) {
+            console.warn('⚠️ Record con recordAttribute inválido:', {
+              recordId: record.id,
+              attributeIndex: index,
+              recordAttribute: ra,
+              ra_exists: !!ra,
+              ra_mapId: ra?.mapId,
+              ra_keys: ra ? Object.keys(ra) : 'ra is null/undefined',
+              totalAttributes: record.recordAttributes?.length
+            });
+            return;
+          }
+          
           if (!shapesByMap[ra.mapId]) {
             shapesByMap[ra.mapId] = [];
           }
@@ -64,7 +76,7 @@ const MapPage = () => {
             attributes: {
               recordId: record.id,
               roleId: record.roleId || "",
-              ...ra.attributes, // Atributos específicos para este mapa
+              ...(ra.attributes || {}), // Atributos específicos para este mapa
             },
           });
         });

@@ -5,11 +5,17 @@ import type { CreateRecordDto, UpdateRecordDto, PaginationQueryParams } from '..
 
 /**
  * Hook para obtener records paginados
+ * Si params.mapId está definido, solo busca records de ese mapa
+ * Si no hay mapId, la query está deshabilitada
  */
 export const useRecords = (params?: PaginationQueryParams) => {
+  // Solo hacer fetch si hay mapId válido, de lo contrario deshabilitar
+  const enabled = !!params?.mapId && params.mapId > 0;
+  
   return useQuery({
     queryKey: queryKeys.records.list(params),
     queryFn: () => recordsService.getAll(params),
+    enabled,
   });
 };
 

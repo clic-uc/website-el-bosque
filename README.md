@@ -1,84 +1,378 @@
-# website-el-bosque
+# Website El Bosque
 
-Sitio frontend del proyecto "El Bosque" — una aplicación React + Vite que muestra mapas interactivos (Leaflet) y permite dibujar/gestionar formas.
+Frontend del proyecto "El Bosque" — aplicación web para visualización y gestión de datos georreferenciados en mapas interactivos.
 
-## Resumen
+## Stack Tecnológico
 
-- Tecnologías: React, Vite, TypeScript, Tailwind CSS, Leaflet, react-leaflet, react-leaflet-draw.
-- Propósito: interfaz web para visualizar y editar georreferencias y mapas.
+- **React 18.3.1** - Librería UI
+- **Vite 6.2.0** - Build tool y dev server
+- **TypeScript 5.8.3** - Tipado estático
+- **Tailwind CSS 3.4.17** - Estilos utility-first
+- **Leaflet + React-Leaflet** - Mapas interactivos
+- **TanStack Query v5** - Manejo de estado servidor
+- **Axios** - Cliente HTTP
+- **React Router v7** - Navegación
 
-## Scripts útiles
+## Scripts
 
-- `npm run dev` — Levanta el servidor de desarrollo (Vite + HMR).
-- `npm run build` — Genera la versión de producción en `dist/`.
-- `npm run preview` — Sirve la build de producción localmente para pruebas.
-- `npm run lint` — Ejecuta ESLint sobre el proyecto.
+```bash
+npm run dev      # Servidor de desarrollo (http://localhost:5173)
+npm run build    # Build de producción
+npm run preview  # Preview del build
+npm run lint     # Linter (ESLint)
+```
 
-## Estructura principal
+## Estructura del Proyecto
 
-- `index.html` - plantilla HTML.
-- `src/` - código fuente React + TypeScript.
-	- `main.tsx` - punto de entrada.
-	- `App.tsx` / `App.css` - componente raíz y estilos.
-	- `pages/` - páginas de la app (`MapPage.tsx`, `MapContainer.jsx`).
-	- `components/` - componentes reutilizables (ej. `map/MapDisplay.tsx`, `SideBar.tsx`, `ShapeInput.tsx`).
-	- `hooks/` - hooks personalizados (`useConfig.tsx`, `useCoordinates.tsx`, `useDrawHooks.tsx`, `useLoadGeoJson.js`).
-	- `data/` - datos estáticos (`elBosqueBorder.geojson.js`).
-- `public/` - activos públicos (logo, `kml/`).
-- `tailwind.config.js`, `postcss.config.js` - configuración de Tailwind.
-- `vite.config.ts` - configuración de Vite.
+```
+src/
+├── main.tsx                    # Punto de entrada
+├── App.tsx                     # Componente raíz con router
+├── pages/                      # Páginas de la aplicación
+│   └── MapPage.tsx            # Página principal del mapa
+├── components/                 # Componentes reutilizables
+│   ├── common/
+│   │   └── Navbar.tsx         # Barra de navegación
+│   └── map/
+│       ├── MapDisplay.tsx     # Componente principal del mapa
+│       ├── SideBar.tsx        # Sidebar con selección de mapas
+│       ├── SidePanel.tsx      # Panel lateral para editar shapes
+│       └── ShapeInput.tsx     # Input manual de coordenadas
+├── hooks/                      # Custom hooks
+│   ├── useMaps.ts             # CRUD de mapas
+│   ├── useRecords.ts          # CRUD de records
+│   ├── useRoles.ts            # CRUD de roles
+│   └── useDrawHooks.tsx       # Lógica de dibujo en mapa
+├── services/
+│   └── api.service.ts         # Servicios de API (mapas, records, roles)
+├── lib/
+│   ├── api-client.ts          # Cliente Axios configurado
+│   └── query-client.ts        # Configuración de TanStack Query
+├── config/
+│   └── api.config.ts          # URLs y endpoints del backend
+├── types/
+│   ├── api.types.ts           # Tipos del backend (MapEntity, Record, etc.)
+│   ├── Map.tsx                # Tipo Map del frontend
+│   └── Shape.tsx              # Tipos de shapes (Point, Line, Poly)
+├── utils/
+│   └── mapTransformers.ts     # Transformación backend ↔ frontend
+└── data/
+    └── elBosqueBorder.geojson.js  # Polígono de El Bosque
+```
 
-## Detalles de implementación
+## Arquitectura de Datos
 
-A continuación se describe con más profundidad cómo está organizado el frontend, cómo están modelados los datos, el flujo de creación/edición/eliminación de formas en el mapa, y recomendaciones prácticas.
+### Backend ↔ Frontend
 
-### 1) Resumen de la arquitectura
+El frontend consume datos del backend NestJS mediante TanStack Query. La transformación de datos se centraliza en `utils/mapTransformers.ts`.
 
-- Stack: React + Vite + TypeScript + Tailwind CSS.
-- Mapas: Leaflet a través de `react-leaflet` y edición con `react-leaflet-draw`.
-- Punto de entrada: `src/main.tsx` → `src/App.tsx` (Router) → `src/pages/MapPage.tsx`.
-- Componente central de mapas: `src/components/map/MapDisplay.tsx`.
-- Hooks de configuración y utilitarios: `src/hooks/useConfig.tsx` y otros hooks en `src/hooks/`.
+**Backend (API)**:
 
-### 2) Modelo de datos
+```typescript
+MapEntity {
+  id: number
+  key: string
+  department: Department  // enum: EDIFICACION, EJECUCION, etc.
+  attributes: {
+    name: string
+    fields: Array<{ name: string, type: string }>
+  }
+}
 
-- `Map` (`src/types/Map.tsx`): contiene id, nombre, department, atributos (metadatos), `drawable` (si puede editarse), `shapeType` (point|line|poly) y `shapes: AnyShape[]`.
-- `AnyShape` (`src/types/Shape.tsx`): unión de `PointShape`, `LineShape`, `PolyShape`. Cada shape incluye `id`, `layerId` y `attributes: Record<string, string|number|boolean>`.
+GeographicalRecord {
+  id: number
+  lat: number
+  lon: number
+  roleId: string
+  recordAttributes: RecordAttribute[]
+}
 
-Notas sobre coordenadas:
-- Internamente el código de interacción con Leaflet convierte y usa pares [lat, lng] (ej. `parsePointLatLng` devuelve `[lat, lng]`).
-- Sin embargo, el comentario en `types/Shape.tsx` menciona `[longitude, latitude]` y esto crea una contradicción potencial con integraciones externas (GeoJSON usa [lng, lat]).
+RecordAttribute {
+  id: number
+  recordId: number
+  mapId: number          // Asocia record con mapa específico
+  attributes: JSONB      // Datos del record para este mapa
+}
+```
 
-### 3) Flujo de creación / edición / eliminación de formas
+**Frontend (UI)**:
 
-- Creación por dibujo:
-	- `EditControl` (react-leaflet-draw) emite `onCreated` que es capturado en `MapDisplay` (`onDrawCreate`).
-	- Se transforma el evento en un `AnyShape` (se asigna `id` con `uuid`) y se llama `onCreateShape(shape, success, error)` pasado por props.
-	- El componente padre (`MapPage`) añade la forma al array `activeMap.shapes` y ejecuta `success`.
-- Edición:
-	- `onEditMove` y `onEditVertex` detectan cambios en marcadores y vértices, recalculan `coordinates` y llaman `onUpdateShape(updatedShape, success, error)`.
-	- El padre reemplaza la forma correspondiente en el estado.
-- Eliminación:
-	- Los `eventHandlers` de cada layer llaman `onDeleteShape(id, success, error)` que el padre usa para filtrar la forma del array.
+```typescript
+Map {
+  id: number
+  name: string
+  department: "edificacion" | "ejecucion" | "emergencias" | "vivienda"
+  attributes: Attribute[]  // Metadata de campos
+  shapes: AnyShape[]       // Records transformados a shapes
+  drawable: boolean
+  shapeType: "point" | "line" | "poly"
+}
 
-Soporte de UI auxiliar:
-- `SidePanel` se abre cuando hay una `selectedShape` y permite editar atributos y guardar (llama `onUpdateShape`).
-- `SideBar` controla la visibilidad de capas mediante `activeLayers`.
+AnyShape = PointShape | LineShape | PolyShape
+{
+  id: string
+  type: "point" | "line" | "poly"
+  layerId: string          // = mapId.toString()
+  coordinates: [lat, lon] | [...] | [[...]]
+  attributes: Record<string, unknown>
+}
+```
 
-### 4) Inconsistencias y riesgos detectados por Copilot
+### Modelo de Coordenadas
 
-1. Convención de coordenadas (lat/lng vs lng/lat): hay una inconsistencia entre los comentarios de tipos y el uso en Leaflet. Riesgo de invertir coordenadas al comunicar con backend o al exportar/importar GeoJSON.
-2. `src/hooks/useLoadGeoJson.js` está escrito para Google Maps (`@vis.gl/react-google-maps`) y no para Leaflet — parece fuera de contexto.
-3. `ShapeInput.tsx` está parcialmente implementado: UI para puntos incompleta (faltan handlers para crear y validar coordenadas) y sin soporte para líneas/polígonos.
-4. Mezcla de `.js` y `.tsx` en hooks y uso extendido de `any` en handlers de `react-leaflet-draw` — recomendable tipar mejor para seguridad.
-5. `useConfig.tsx` devuelve valores hardcodeados; es mejor migrar configuración sensible a `.env` o a un archivo de configuración centralizable.
+- **Formato interno**: `[latitude, longitude]` (compatible con Leaflet)
+- **Backend**: Devuelve `{ lat: number, lon: number }`
+- **Transformación**: `coordinates: [record.lat, record.lon]`
 
-### 5) Recomendaciones de Copilot
+## Integración con Backend
 
-1. Normalizar la convención de coordenadas:
-	 - Decidir si internamente se representa `[lat, lng]` (más directo con Leaflet) o se usa la convención GeoJSON `[lng, lat]` y documentarlo, luego aplicar conversiones centralizadas.
-	 - Actualizar comentarios de `src/types/Shape.tsx` y añadir tests para los parseadores (`parsePointLatLng`, `parseLineLatLngs`, `parsePolyLatLngs`).
-2. Eliminar o reimplementar `src/hooks/useLoadGeoJson.js` para Leaflet (usar `L.geoJSON` o el componente `GeoJSON` de `react-leaflet`).
-3. Completar `ShapeInput.tsx`: añadir validación de texto, creación de shapes, y preview en el mapa (`inputGroupRef`).
-4. Mejorar tipado y reducir `any` en handlers de `react-leaflet-draw` donde sea posible.
-5. Integrar llamadas reales al backend en `pages/MapPage.tsx` (fetch/axios) con manejo de errores y/o UI optimista.
+### Configuración
+
+Configurar URL del backend en `.env.local`:
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+### Servicios Disponibles
+
+#### Maps Service (`services/api.service.ts`)
+
+```typescript
+mapsService.getAll(); // GET /maps
+mapsService.getById(id); // GET /maps/:id
+mapsService.create(dto); // POST /maps
+mapsService.update(id, dto); // PATCH /maps/:id
+mapsService.delete(id); // DELETE /maps/:id
+```
+
+#### Records Service
+
+```typescript
+recordsService.getAll(params); // GET /records?mapId=X&hasCoordinates=true
+recordsService.getById(id); // GET /records/:id
+recordsService.create(dto); // POST /records
+recordsService.update(id, dto); // PATCH /records/:id
+recordsService.delete(id); // DELETE /records/:id
+recordsService.importForMap(mapId, file); // POST /records/import/map/:id
+```
+
+#### Roles Service
+
+```typescript
+rolesService.getAll(params); // GET /roles
+rolesService.getById(roleId); // GET /roles/:roleId
+rolesService.importCoordinates(file); // POST /roles/import-coordinates
+```
+
+### Hooks de TanStack Query
+
+#### useMaps
+
+```typescript
+const { data, isLoading, error } = useMaps();
+const { mutate } = useCreateMap();
+const { mutate } = useUpdateMap();
+const { mutate } = useDeleteMap();
+```
+
+#### useRecords
+
+```typescript
+// Solo carga records de mapas activos con coordenadas
+const { data } = useRecords({
+  mapId: 5, // Requerido
+  hasCoordinates: true, // Filtro server-side
+  limit: 100,
+});
+```
+
+#### Cache Management
+
+TanStack Query mantiene cache con:
+
+- **staleTime**: 5 minutos
+- **gcTime**: 10 minutos
+- **Invalidación automática**: Las mutaciones invalidan caches relacionados
+
+## Flujo de la Aplicación
+
+### 1. Carga Inicial
+
+```
+MapPage.tsx
+  ↓
+useMaps() → GET /maps
+  ↓
+transformBackendMapToFrontend()
+  ↓
+SideBar muestra mapas agrupados por departamento (todos desmarcados)
+```
+
+### 2. Selección de Mapa
+
+```
+Usuario marca checkbox en SideBar
+  ↓
+handleToggleMap(mapId) → setActiveMaps([mapId])
+  ↓
+useRecords({ mapId, hasCoordinates: true })
+  ↓
+Backend: INNER JOIN record_attributes WHERE mapId = X
+  ↓
+Frontend: transforma records a shapes
+  ↓
+MapDisplay renderiza markers en mapa Leaflet
+```
+
+### 3. Edición de Shapes (Local)
+
+```
+Usuario dibuja/edita shape en mapa
+  ↓
+react-leaflet-draw emite evento
+  ↓
+MapDisplay → onDrawCreate / onEditMove / onEditVertex
+  ↓
+MapPage → setLocalShapes() (solo en estado local)
+  ↓
+Shapes locales se combinan con shapes del backend
+  ↓
+MapDisplay re-renderiza
+```
+
+**Nota**: Las shapes creadas localmente NO se persisten al backend automáticamente. Se mantienen en estado local hasta implementar persistencia.
+
+## Componentes Principales
+
+### MapPage (`pages/MapPage.tsx`)
+
+Componente contenedor principal que:
+
+- Gestiona estado de mapas activos (`activeMaps`)
+- Gestiona shapes locales creados por el usuario (`localShapes`)
+- Fetches de datos con `useMaps()` y `useRecords()`
+- Combina shapes del backend con shapes locales
+- Maneja callbacks de creación/edición/eliminación
+
+### MapDisplay (`components/map/MapDisplay.tsx`)
+
+Componente Leaflet que:
+
+- Renderiza el mapa interactivo
+- Muestra markers/polylines/polygons según shapes
+- Habilita herramientas de dibujo (react-leaflet-draw)
+- Maneja eventos de interacción (click, edit, delete)
+- Emite eventos hacia MapPage mediante callbacks
+
+Props principales:
+
+```typescript
+{
+  maps: Map[]              // Mapas con sus shapes
+  activeMap: Map           // Mapa seleccionado para dibujo
+  activeMaps: number[]     // IDs de mapas visibles
+  onCreateShape: (shape, success, error) => void
+  onUpdateShape: (shape, success, error) => void
+  onDeleteShape: (id, success, error) => void
+}
+```
+
+### SideBar (`components/map/SideBar.tsx`)
+
+Panel lateral que:
+
+- Agrupa mapas por departamento (colapsables)
+- Muestra checkboxes para seleccionar mapas
+- Controla visibilidad de records en el mapa
+- Cada departamento muestra contador de mapas
+
+Estructura:
+
+```
+📁 Edificación (9)
+  ☐ Edificación Nueva
+  ☐ Obras Menores
+  ☑ Permiso de Edificación
+  ...
+
+📁 Ejecución (5)
+  ☐ Calzadas
+  ☐ Veredas
+  ...
+```
+
+### SidePanel (`components/map/SidePanel.tsx`)
+
+Panel emergente para editar attributes de un shape seleccionado:
+
+- Muestra formulario dinámico según `map.attributes`
+- Permite editar valores de cada campo
+- Botón "Guardar" llama `onUpdateShape`
+- Botón "Cancelar" cierra el panel
+
+## Sistema de Shapes
+
+### Tipos de Shapes
+
+**PointShape**: Representa un marcador
+
+```typescript
+{
+  id: "record-123",
+  type: "point",
+  layerId: "5",
+  coordinates: [-33.45, -70.66],
+  attributes: { roleId: "...", nombre: "..." }
+}
+```
+
+**LineShape**: Representa una línea/camino
+
+```typescript
+{
+  type: "line",
+  coordinates: [[-33.45, -70.66], [-33.46, -70.67], ...]
+}
+```
+
+**PolyShape**: Representa un polígono/área
+
+```typescript
+{
+  type: "poly",
+  coordinates: [[[-33.45, -70.66], [-33.46, -70.67], ...]]
+}
+```
+
+### Parsers de Coordenadas
+
+Funciones en `components/map/MapDisplay.tsx`:
+
+- `parsePointLatLng(marker)` → `[lat, lng]`
+- `parseLineLatLngs(polyline)` → `[[lat, lng], ...]`
+- `parsePolyLatLngs(polygon)` → `[[[lat, lng], ...]]`
+
+### layerId: Identificador de Mapa
+
+Anteriormente `layerId` se usaba para "capas dentro de mapas", pero eso fue un malentendido.
+
+**Arquitectura actual**:
+
+- `layerId` = `mapId.toString()`
+- No hay concepto de capas internas
+- Cada mapa es independiente
+- Ver `ARQUITECTURA_ACTUALIZADA.md` para detalles
+
+## Limitaciones Actuales
+
+1. **Solo primer mapa activo carga records**: Si seleccionas múltiples mapas, solo se cargan records del primero.
+2. **Límite de 100 records**: Paginación no implementada en UI.
+3. **Shapes locales no persisten**: Se pierden al recargar la página.
+4. **Sin clustering**: Alta densidad de markers puede afectar performance.
+5. **Sin filtros avanzados**: No se puede buscar por atributos específicos.
+
+## Documentación Adicional
+
+- `ARQUITECTURA_ACTUALIZADA.md` - Evolución de la arquitectura y decisiones de diseño
+- `ARQUITECTURA_SHAPES.md` - Detalles sobre el sistema de shapes
