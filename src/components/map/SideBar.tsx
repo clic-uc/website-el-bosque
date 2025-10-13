@@ -1,39 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { Map, Layer } from "../../types/Map.tsx";
-
-type MapItem = {
-    id: number
-    name: string
-}
+import React, { useState, useMemo } from "react";
+import { Map } from "../../types/Map.tsx";
+import { groupMapsByDepartment, getDepartmentLabel } from "../../utils/mapTransformers";
 
 type SideBarProps = {
     maps: Map[]
     activeMaps: number[]
     onToggleMap: (id: number) => void
-    activeLayers: Record<number, string[]>
-    onToggleLayer: (mapId: number, layerId: string) => void
 }
 
 const SideBar: React.FC<SideBarProps> = ({ 
     maps,
     activeMaps,
     onToggleMap,
-    activeLayers,
-    onToggleLayer
 }) => {
-    const [expandedMaps, setExpandedMaps] = useState<Set<number>>(new Set());
+    const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(
+        new Set(["edificacion", "ejecucion", "emergencias", "vivienda"])
+    );
 
-    useEffect(() => {
-        setExpandedMaps(new Set(maps.map(map => map.id)));
+    // Agrupar mapas por departamento
+    const groupedMaps = useMemo(() => {
+        return groupMapsByDepartment(maps);
     }, [maps]);
 
-    const toggleMapExpansion = (mapId: number) => {
-        setExpandedMaps(prev => {
+    const toggleDepartmentExpansion = (dept: string) => {
+        setExpandedDepartments(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(mapId)) {
-                newSet.delete(mapId);
+            if (newSet.has(dept)) {
+                newSet.delete(dept);
             } else {
-                newSet.add(mapId);
+                newSet.add(dept);
             }
             return newSet;
         });
@@ -42,30 +37,43 @@ const SideBar: React.FC<SideBarProps> = ({
     return (
         <div className="w-[500px] min-w-[200px] h-screen bg-white shadow-md border-r p-4 flex flex-col gap-4 overflow-y-auto">
             <div className="flex-shrink-0">
-                <h2 className="text-lg font-bold mb-3">Mapas</h2>
+                <h2 className="text-lg font-bold mb-3">Departamentos y Mapas</h2>
                 <div className="flex flex-col gap-2">
-                    {maps.map((map) => (
-                        <div key={map.id} className="flex flex-col">
+                    {Object.keys(groupedMaps).map((department) => (
+                        <div key={department} className="flex flex-col mb-2">
+                            {/* Departamento */}
                             <div 
-                                className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded select-none"
-                                onClick={() => toggleMapExpansion(map.id)}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 p-2 rounded select-none bg-blue-100"
+                                onClick={() => toggleDepartmentExpansion(department)}
                             >
-                                <span className="text-sm">
-                                    {expandedMaps.has(map.id) ? '▼' : '▶'}
+                                <span className="text-sm font-bold">
+                                    {expandedDepartments.has(department) ? '▼' : '▶'}
                                 </span>
-                                <span className="text-sm font-medium break-words">{map.name}</span>
+                                <span className="text-sm font-bold text-blue-900">
+                                    {getDepartmentLabel(department)}
+                                </span>
+                                <span className="text-xs text-gray-500 ml-auto">
+                                    ({groupedMaps[department].length})
+                                </span>
                             </div>
-                            {expandedMaps.has(map.id) && (
-                                <div className="flex flex-col gap-1 pl-6 mt-1">
-                                    {map.layers.map((layer) => (
-                                        <label key={`${map.id}-${layer.id}`} className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+
+                            {/* Mapas del departamento */}
+                            {expandedDepartments.has(department) && (
+                                <div className="flex flex-col gap-1 pl-4 mt-1">
+                                    {groupedMaps[department].map((map) => (
+                                        <label 
+                                            key={map.id} 
+                                            className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
+                                        >
                                             <input
                                                 type="checkbox"
-                                                checked={activeLayers[map.id]?.includes(layer.id) || false}
-                                                onChange={() => onToggleLayer(map.id, layer.id)}
+                                                checked={activeMaps.includes(map.id)}
+                                                onChange={() => onToggleMap(map.id)}
                                                 className="w-4 h-4 flex-shrink-0 mt-0.5"
                                             />
-                                            <span className="text-sm break-words leading-tight">{layer.name}</span>
+                                            <span className="text-sm font-medium break-words">
+                                                {map.name}
+                                            </span>
                                         </label>
                                     ))}
                                 </div>
