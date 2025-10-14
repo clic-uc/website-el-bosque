@@ -207,6 +207,249 @@ TanStack Query mantiene cache con:
 - **gcTime**: 10 minutos
 - **Invalidación automática**: Las mutaciones invalidan caches relacionados
 
+## Sistema de Paginación
+
+### Backend: API REST con Offset-Based Pagination
+
+El backend implementa paginación basada en offset para todos los endpoints que retornan colecciones.
+
+#### Estructura de Query Parameters
+
+```typescript
+// Parámetros disponibles en GET /records
+interface PaginationQuery {
+  page?: number; // Página actual (default: 1)
+  limit?: number; // Items por página (default: 20, max: 10000)
+  mapId?: number; // Filtrar por mapa específico
+  hasCoordinates?: boolean; // Solo records con lat/lon válidos
+  search?: string; // Búsqueda por prefijo de roleId
+}
+```
+
+#### Response Structure
+
+```typescript
+// Estructura de respuesta paginada
+interface PaginatedResponse<T> {
+  data: T[]; // Items de la página actual
+  meta: {
+    total: number; // Total de items en la base de datos
+    page: number; // Página actual
+    limit: number; // Items por página
+    totalPages: number; // Total de páginas disponibles
+    hasNextPage: boolean; // Si existe página siguiente
+    hasPreviousPage: boolean; // Si existe página anterior
+  };
+}
+```
+
+#### Ejemplo de Request/Response
+
+```bash
+# Request
+GET /records?mapId=5&hasCoordinates=true&page=1&limit=100
+
+# Response
+{
+  "data": [
+    {
+      "id": 3414,
+      "lat": -33.45,
+      "lon": -70.66,
+      "role": { "roleId": "05708-00007" },
+      "recordAttributes": [...]
+    }
+    // ... 99 más
+  ],
+  "meta": {
+    "total": 5234,
+    "page": 1,
+    "limit": 100,
+    "totalPages": 53,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
+}
+```
+
+### Frontend: Estrategias de Paginación
+
+#### 1. Carga Masiva para Clustering (Actual)
+
+**Implementación actual**: El frontend solicita hasta 5,000 records de una vez para habilitar clustering efectivo.
+
+```typescript
+// En MapPage.tsx
+const { data: recordsData, isLoading } = useRecords({
+  mapId: firstActiveMapId,
+  hasCoordinates: true,
+  limit: 5000, // Límite alto para clustering
+});
+```
+
+**Ventajas**:
+
+- ✅ Clustering funciona con todos los datos disponibles
+- ✅ Búsqueda instantánea en el dataset cargado
+- ✅ Sin necesidad de paginación en UI (para datasets < 5K)
+
+**Desventajas**:
+
+- ❌ Carga inicial lenta para mapas con muchos records
+- ❌ Alto consumo de memoria del navegador
+- ❌ No escalable para datasets > 5K records
+
+#### 2. Paginación Tradicional con UI (No Implementada)
+
+**Posible implementación**: Componente de paginación clásico con botones "Anterior/Siguiente".
+
+```typescript
+// Ejemplo de implementación futura
+const PaginationComponent: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 100;
+
+  const { data, isLoading } = useRecords({
+    mapId: selectedMapId,
+    hasCoordinates: true,
+    page: currentPage,
+    limit: limit,
+  });
+
+  const totalPages = data?.meta.totalPages || 1;
+
+  return (
+    <div className="pagination">
+      <button
+        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        disabled={!data?.meta.hasPreviousPage}
+      >
+        Anterior
+      </button>
+
+      <span>
+        Página {currentPage} de {totalPages}
+      </span>
+
+      <button
+        onClick={() => setCurrentPage((p) => p + 1)}
+        disabled={!data?.meta.hasNextPage}
+      >
+        Siguiente
+      </button>
+    </div>
+  );
+};
+```
+
+**Ventajas**:
+
+- ✅ Carga rápida inicial
+- ✅ Escalable para cualquier cantidad de datos
+- ✅ Menor uso de memoria
+
+**Desventajas**:
+
+- ❌ Clustering limitado a página actual (menos efectivo)
+- ❌ Búsqueda solo dentro de página actual
+- ❌ UX más compleja con navegación entre páginas
+
+#### 3. Infinite Scroll / Virtual Scrolling (No Implementada)
+
+**Posible implementación**: Carga progresiva al hacer scroll o acercarse al final de la lista.
+
+```typescript
+// Ejemplo con TanStack Query Infinite Queries
+const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  useInfiniteQuery({
+    queryKey: ["records", mapId],
+    queryFn: ({ pageParam = 1 }) =>
+      recordsService.getAll({
+        mapId,
+        page: pageParam,
+        limit: 100,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.hasNextPage ? lastPage.meta.page + 1 : undefined,
+  });
+
+// Todos los records cargados hasta ahora
+const allRecords = data?.pages.flatMap((page) => page.data) || [];
+```
+
+**Ventajas**:
+
+- ✅ Mejor UX sin botones de paginación
+- ✅ Carga progresiva según necesidad del usuario
+- ✅ Clustering mejora progresivamente
+
+**Desventajas**:
+
+- ❌ Complejidad de implementación
+- ❌ Estado complejo (múltiples páginas en memoria)
+- ❌ Posible consumo de memoria creciente
+
+### Performance Considerations
+
+#### Offset-Based Pagination Limitations
+
+El backend usa paginación basada en offset (`LIMIT X OFFSET Y`), que tiene limitaciones de performance:
+
+```sql
+-- Página 1: Rápido
+SELECT * FROM records LIMIT 100 OFFSET 0;
+
+-- Página 500: Lento (debe procesar 49,900 records)
+SELECT * FROM records LIMIT 100 OFFSET 49900;
+```
+
+**Optimizaciones aplicadas**:
+
+- ✅ Índices en columnas filtradas (`mapId`, `lat`, `lon`)
+- ✅ INNER JOIN optimizado cuando `mapId` está presente
+- ✅ Límite máximo de 10,000 para prevenir queries excesivamente costosas
+
+#### Cursor-Based Pagination (Alternativa)
+
+**No implementado**: Paginación basada en cursor sería más eficiente para datasets grandes.
+
+```typescript
+// Ejemplo de cursor-based (no implementado)
+interface CursorPaginationQuery {
+  cursor?: string;        // ID del último item de la página anterior
+  limit?: number;
+  mapId?: number;
+}
+
+// SQL más eficiente
+SELECT * FROM records WHERE id > :cursor ORDER BY id LIMIT 100;
+```
+
+**Ventajas**: Performance constante independiente de la página
+**Desventajas**: No permite ir a página específica, complica UI
+
+### Recomendaciones de Implementación
+
+#### Para Datasets Pequeños (< 1K records por mapa)
+
+- ✅ **Mantener implementación actual**: Carga masiva con clustering
+- ✅ Sin paginación en UI necesaria
+- ✅ Búsqueda instantánea funciona perfectamente
+
+#### Para Datasets Medianos (1K - 10K records por mapa)
+
+- 🔄 **Implementar carga adaptiva**:
+  - Si `total < 1000` → carga masiva
+  - Si `total >= 1000` → paginación con UI
+- 🔄 **Clustering híbrido**: Agrupar solo markers visibles en página actual
+
+#### Para Datasets Grandes (> 10K records por mapa)
+
+- 🔄 **Infinite scroll obligatorio**
+- 🔄 **Server-side clustering**: Backend pre-calcula clusters por zoom level
+- 🔄 **Cursor-based pagination**: Para mejor performance
+- 🔄 **Virtualización**: Solo renderizar markers en viewport actual
+
 ## Flujo de la Aplicación
 
 ### 1. Carga Inicial
