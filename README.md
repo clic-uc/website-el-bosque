@@ -371,6 +371,7 @@ Anteriormente `layerId` se usaba para "capas dentro de mapas", pero eso fue un m
 3. **Shapes locales no persisten**: Se pierden al recargar la página.
 4. **Sin clustering**: Alta densidad de markers puede afectar performance.
 5. **Sin filtros avanzados**: No se puede buscar por atributos específicos.
+6. **SidePanel se cierra al agrupar markers**: Cuando un marker seleccionado se agrupa en un cluster (zoom out), el panel lateral se cierra automáticamente. Requiere revisión de la lógica de preservación de estado de selección.
 
 ## Documentación Adicional
 
