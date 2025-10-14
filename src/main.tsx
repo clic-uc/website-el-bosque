@@ -5,7 +5,9 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/query-client';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
-import 'react-leaflet-cluster/dist/styles.min.css';
+// react-leaflet-cluster ships the MarkerCluster CSS under dist/assets
+import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css';
+import 'react-leaflet-cluster/dist/assets/MarkerCluster.css';
 import App from './App';
 
 createRoot(document.getElementById('root')!).render(
