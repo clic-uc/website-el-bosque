@@ -2,6 +2,7 @@ import {Map} from "../../types/Map";
 import {AnyShape, PointShape} from "../../types/Shape.tsx";
 import {useConfig} from "../../hooks/useConfig.tsx";
 import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer} from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import {EditControl} from "react-leaflet-draw";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {twMerge} from "tailwind-merge";
@@ -279,37 +280,43 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 <TileLayer
                     url={config.mapUrl}
                 />
-                {maps.filter(map => !activeMaps || activeMaps.includes(map.id)).map(map => (
-                    <FeatureGroup
-                        key={map.id}
-                        ref={el => {
-                            if (el && map === activeMap) {
-                                featureGroupRef.current = el;
-                        }}}
-                    >
-                        {
-                            map === activeMap && map.drawable && (
-                                <>
-                                    <EditControl
-                                        onCreated={onDrawCreate}
-                                        onEditMove={onEditMove}
-                                        onEditVertex={onEditVertex}
-                                        draw={map.shapeType === "point" ?
-                                            markerDrawOptions :
-                                            map.shapeType === "line" ?
-                                                pointDrawOptions :
-                                                polyDrawOptions}
-                                        edit={{
-                                            remove: {},
-                                            edit: false,
-                                        }}
-                                        position={"topright"}
-                                    />
-                                </>
-                            )
-                        }
-                        {map.shapes.map(shape => {
-                                    switch (shape.type) {
+                {maps.filter(map => !activeMaps || activeMaps.includes(map.id)).map(map => {
+                    const pointShapes = map.shapes.filter(shape => shape.type === "point");
+                    const nonPointShapes = map.shapes.filter(shape => shape.type !== "point");
+                    
+                    return (
+                        <FeatureGroup
+                            key={map.id}
+                            ref={el => {
+                                if (el && map === activeMap) {
+                                    featureGroupRef.current = el;
+                            }}}
+                        >
+                            {
+                                map === activeMap && map.drawable && (
+                                    <>
+                                        <EditControl
+                                            onCreated={onDrawCreate}
+                                            onEditMove={onEditMove}
+                                            onEditVertex={onEditVertex}
+                                            draw={map.shapeType === "point" ?
+                                                markerDrawOptions :
+                                                map.shapeType === "line" ?
+                                                    pointDrawOptions :
+                                                    polyDrawOptions}
+                                            edit={{
+                                                remove: {},
+                                                edit: false,
+                                            }}
+                                            position={"topright"}
+                                        />
+                                    </>
+                                )
+                            }
+                            
+                            {/* Non-point shapes (polygons and polylines) */}
+                            {nonPointShapes.map(shape => {
+                                switch (shape.type) {
                                     case "poly":
                                         return (
                                             <Polygon
@@ -336,24 +343,35 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                                                 eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
                                             />
                                         )
-                                    case "point":
-                                        return (
-                                            <Marker
-                                                ref={el => {
-                                                    if (el && layerRefs.current && map === activeMap) {
-                                                        layerRefs.current[shape.id] = el;
-                                                    }
-                                                }}
-                                                key={shape.id}
-                                                position={shape.coordinates}
-                                                eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
-                                            >
-                                            </Marker>
-                                        )
+                                    default:
+                                        return null;
                                 }
                             })}
-                    </FeatureGroup>
-                ))}
+                            
+                            {/* Point shapes with clustering */}
+                            <MarkerClusterGroup
+                                chunkedLoading
+                                maxClusterRadius={50}
+                                spiderfyOnMaxZoom={true}
+                                showCoverageOnHover={false}
+                                zoomToBoundsOnClick={true}
+                            >
+                                {pointShapes.map(shape => (
+                                    <Marker
+                                        ref={el => {
+                                            if (el && layerRefs.current && map === activeMap) {
+                                                layerRefs.current[shape.id] = el;
+                                            }
+                                        }}
+                                        key={shape.id}
+                                        position={shape.coordinates}
+                                        eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
+                                    />
+                                ))}
+                            </MarkerClusterGroup>
+                        </FeatureGroup>
+                    );
+                })}
             </MapContainer>
             <SidePanel
                 shape={selectedShape}

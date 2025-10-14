@@ -30,7 +30,7 @@ const MapPage = () => {
   const { data: recordsData } = useRecords({ 
     mapId: firstActiveMapId,
     hasCoordinates: true,
-    limit: 100 
+    limit: 5000  // Límite aumentado para probar clustering con muchos datos
   });
 
   // Transform records to shapes
