@@ -100,7 +100,7 @@ export default function ApiTestPage() {
             <ul className="space-y-2">
               {recordsData.data.slice(0, 5).map((record) => (
                 <li key={record.id} className="bg-gray-100 p-3 rounded">
-                  <strong>Record #{record.id}</strong> - Role: {record.roleId}
+                  <strong>Record #{record.id}</strong> - Role: {record.role?.roleId || 'N/A'}
                   <span className="ml-2 text-sm text-gray-600">
                     ({record.lat}, {record.lon})
                   </span>

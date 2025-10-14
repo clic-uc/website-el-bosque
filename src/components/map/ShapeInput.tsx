@@ -1,20 +1,11 @@
 import {AnyShape} from "../../types/Shape.tsx";
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useState} from "react";
 import {IoMdAdd, IoMdClose} from "react-icons/io";
 
 interface ShapeInputProps {
     type: "point" | "line" | "poly";
     onCreate: (shape: AnyShape) => void;
     inputGroupRef: React.RefObject<L.FeatureGroup | null>;
-}
-
-const parsePasteText = (text: string): [number, number] | null => {
-    const coords = text.split(",").map(coord => coord.trim());
-    if (coords.length !== 2) return null;
-    const lat = parseFloat(coords[0]);
-    const lon = parseFloat(coords[1]);
-    if (isNaN(lat) || isNaN(lon)) return null;
-    return [lat, lon];
 }
 
 const ShapeInput: React.FC<ShapeInputProps> = (props) => {

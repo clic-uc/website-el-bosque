@@ -1,7 +1,7 @@
 import {Map} from "../../types/Map";
 import {AnyShape, PointShape} from "../../types/Shape.tsx";
 import {useConfig} from "../../hooks/useConfig.tsx";
-import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer} from "react-leaflet";
+import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer, useMap} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import {EditControl} from "react-leaflet-draw";
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -19,6 +19,8 @@ interface MapDisplayProps {
     onUpdateShape: (shape: AnyShape, success: (shape: AnyShape) => void,  errorCallback: (error: string) => void) => void;
     onDeleteShape: (shapeId: string, success: () => void, errorCallback: (error: string) => void) => void;
     className?: string;
+    selectedShapeFromSearch?: AnyShape | null;
+    onSearchShapeCleared?: () => void;
 }
 
 const parsePolyLatLngs = (latLngs: LatLng[][]) => {
@@ -35,14 +37,39 @@ const parsePointLatLng = (latLng: LatLng) => {
     return [latLng.lat, latLng.lng] as [number, number];
 }
 
+// Componente auxiliar para manejar zoom a shape desde búsqueda
+const MapZoomHandler: React.FC<{
+    selectedShapeFromSearch: AnyShape | null;
+    onCleared: () => void;
+}> = ({ selectedShapeFromSearch, onCleared }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (selectedShapeFromSearch && selectedShapeFromSearch.type === "point") {
+            const coords = selectedShapeFromSearch.coordinates;
+            // Hacer zoom al punto seleccionado
+            map.setView([coords[0], coords[1]], 18, {
+                animate: true,
+                duration: 1,
+            });
+            
+            // Limpiar después de hacer zoom
+            setTimeout(() => {
+                onCleared();
+            }, 100);
+        }
+    }, [selectedShapeFromSearch, map, onCleared]);
+
+    return null;
+};
+
 const MapDisplay: React.FC<MapDisplayProps> = (
-    {maps, activeMap, activeMaps, onCreateShape, onUpdateShape, onDeleteShape, className},
+    {maps, activeMap, activeMaps, onCreateShape, onUpdateShape, onDeleteShape, className, selectedShapeFromSearch, onSearchShapeCleared},
 ) => {
 
     const config = useConfig();
 
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
-    const [error, setError] = useState<string | null>(null);
     
     // Debug: log when selectedShape changes
     useEffect(() => {
@@ -67,6 +94,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         }
     }, [activeMap, activeMap.shapes, selectedShape]);
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const layerRefs = useRef<Record<string, any>>({});
     const featureGroupRef = useRef<L.FeatureGroup>(null);
     const inputGroupRef = useRef<L.FeatureGroup>(null);
@@ -109,8 +137,8 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     }
 
     const mergedClassNames = twMerge(
-        className || "",
-        "relative overflow-hidden"
+        "relative w-full h-full overflow-hidden",
+        className || ""
     );
 
     const save = useCallback((newAttributes: Record<string, string | number | boolean>) => {
@@ -126,7 +154,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             () => {
                 setSelectedShape(null);
             },
-            (error) => setError(error)
+            (error) => console.error('Error updating shape:', error)
         )
     }, [selectedShape, onUpdateShape]);
     
@@ -145,7 +173,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                     setSelectedShape(null);
                     delete layerRefs.current[shape.id];
                 },
-                error => setError(error)
+                error => console.error('Error deleting shape:', error)
             );
         },
     })
@@ -156,12 +184,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             (newShape) => {
                 setSelectedShape(newShape);
             },
-            (error) => setError(error)
+            (error) => console.error('Error creating shape from input:', error)
         );
     }, [onCreateShape]);
 
     // `v` is the event object from react-leaflet-draw. Use `any` here to avoid
     // deep typings; keep implementation unchanged.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onDrawCreate = useCallback((v: any) => {
         const supportedTypes = ["polyline", "polygon", "marker"];
 
@@ -215,12 +244,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             (newShape) => {
                 setSelectedShape(newShape);
             },
-            (error) => setError(error)
+            (error) => console.error('Error creating shape from draw:', error)
         );
         
     }, [onCreateShape]);
 
     // `v` is the edit event from react-leaflet-draw
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onEditMove = useCallback((v: any) => {
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.layer);
         if (!shapeId) return;
@@ -246,12 +276,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                     setSelectedShape(newShape);
                 }
             },
-            (error) => setError(error)
+            (error) => console.error('Error editing shape (move):', error)
         );
         
     }, [activeMap.shapes, onUpdateShape, selectedShape]);
     
     // `v` is the vertex edit event from react-leaflet-draw
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onEditVertex = useCallback((v: any) => {
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.poly);
         if (!shapeId) return;
@@ -283,7 +314,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                     setSelectedShape(newShape);
                 }
             },
-            (error) => setError(error)
+            (error) => console.error('Error editing shape (vertex):', error)
         );
     }, [activeMap.shapes, onUpdateShape, selectedShape]);
 
@@ -311,7 +342,14 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 ]}
                 zoom={14}
                 bounds={[[config.mapBounds.minLatitude, config.mapBounds.minLongitude], [config.mapBounds.maxLatitude, config.mapBounds.maxLongitude]]}
+                style={{ width: '100%', height: '100%' }}
             >
+                {/* Handler para zoom desde búsqueda */}
+                <MapZoomHandler
+                    selectedShapeFromSearch={selectedShapeFromSearch || null}
+                    onCleared={onSearchShapeCleared || (() => {})}
+                />
+                
                 <TileLayer
                     url={config.mapUrl}
                 />

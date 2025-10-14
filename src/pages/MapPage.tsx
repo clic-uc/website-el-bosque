@@ -2,6 +2,7 @@ import "leaflet/dist/leaflet.css";
 import MapDisplay from "../components/map/MapDisplay.tsx";
 import { AnyShape } from "../types/Shape.tsx";
 import SideBar from "../components/map/SideBar.tsx";
+import SearchBar from "../components/map/SearchBar.tsx";
 import { useMemo, useState } from "react";
 import { useMaps } from "../hooks/useMaps";
 import { useRecords } from "../hooks/useRecords";
@@ -22,6 +23,9 @@ const MapPage = () => {
   // State: Shapes creados localmente por el usuario (no persistidos aún en backend)
   const [localShapes, setLocalShapes] = useState<Record<number, AnyShape[]>>({});
 
+  // State: Shape seleccionado desde búsqueda (para centrar mapa)
+  const [selectedShapeFromSearch, setSelectedShapeFromSearch] = useState<AnyShape | null>(null);
+
   // Fetch records SOLO para los mapas activos con coordenadas válidas
   const firstActiveMapId = activeMaps[0];
   
@@ -37,9 +41,6 @@ const MapPage = () => {
   // layerId ahora = mapId (corrigiendo el malentendido original)
   const shapesFromRecords = useMemo(() => {
     if (!recordsData?.data) return {};
-    
-    console.log('📊 Records recibidos del backend:', recordsData.data.length);
-    console.log('📊 Primer record:', recordsData.data[0]);
     
     const shapesByMap: Record<number, AnyShape[]> = {};
     
@@ -75,7 +76,7 @@ const MapPage = () => {
             coordinates: [record.lat, record.lon],
             attributes: {
               recordId: record.id,
-              roleId: record.roleId || "",
+              "Rol SII": record.role?.roleId || "", // ✅ Agregar Rol SII como atributo
               ...(ra.attributes || {}), // Atributos específicos para este mapa
             },
           });
@@ -109,6 +110,24 @@ const MapPage = () => {
   );
 
   const activeMap = activeMapsData[0] || mapsWithShapes[0];
+
+  // Obtener todos los shapes disponibles para búsqueda
+  const allShapes = useMemo(() => {
+    return mapsWithShapes.flatMap(map => map.shapes);
+  }, [mapsWithShapes]);
+
+  const handleSearchResultSelect = (shape: AnyShape) => {
+    // Encontrar a qué mapa pertenece el shape
+    const mapId = parseInt(shape.layerId);
+    
+    // Activar el mapa si no está activo
+    if (!activeMaps.includes(mapId)) {
+      setActiveMaps(prev => [...prev, mapId]);
+    }
+    
+    // Marcar el shape para que MapDisplay haga zoom
+    setSelectedShapeFromSearch(shape);
+  };
 
   const handleCreateShape = (
     shape: AnyShape,
@@ -204,22 +223,35 @@ const MapPage = () => {
   }
 
   return (
-    <div className="flex w-screen h-screen">
+    <div className="flex w-screen h-screen overflow-hidden">
       <SideBar
         maps={mapsForDisplay}
         activeMaps={activeMaps}
         onToggleMap={handleToggleMap}
       />
-      <div className="flex-1">
-        <MapDisplay
-          maps={mapsForDisplay}
-          activeMap={activeMap}
-          activeMaps={activeMaps}
-          className={"w-[100vw] h-[100vh]"}
-          onCreateShape={handleCreateShape}
-          onUpdateShape={handleUpdateShape}
-          onDeleteShape={handleDeleteShape}
-        />
+      <div className="flex-1 relative flex flex-col">
+        {/* Barra de búsqueda superior */}
+        <div className="flex-shrink-0 bg-white border-b shadow-sm p-3 z-[1500]">
+          <SearchBar
+            shapes={allShapes}
+            onResultSelect={handleSearchResultSelect}
+          />
+        </div>
+        
+        {/* Mapa */}
+        <div className="flex-1 relative">
+          <MapDisplay
+            maps={mapsForDisplay}
+            activeMap={activeMap}
+            activeMaps={activeMaps}
+            className="w-full h-full"
+            onCreateShape={handleCreateShape}
+            onUpdateShape={handleUpdateShape}
+            onDeleteShape={handleDeleteShape}
+            selectedShapeFromSearch={selectedShapeFromSearch}
+            onSearchShapeCleared={() => setSelectedShapeFromSearch(null)}
+          />
+        </div>
       </div>
     </div>
   );

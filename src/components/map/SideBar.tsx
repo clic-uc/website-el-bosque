@@ -35,7 +35,7 @@ const SideBar: React.FC<SideBarProps> = ({
     };
 
     return (
-        <div className="w-[500px] min-w-[200px] h-screen bg-white shadow-md border-r p-4 flex flex-col gap-4 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 h-full bg-white shadow-md border-r p-4 flex flex-col gap-4 overflow-y-auto">
             <div className="flex-shrink-0">
                 <h2 className="text-lg font-bold mb-3">Departamentos y Mapas</h2>
                 <div className="flex flex-col gap-2">

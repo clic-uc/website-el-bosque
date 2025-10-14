@@ -29,8 +29,9 @@ export function transformBackendMapToFrontend(backendMap: MapEntity): Map {
   const fields = Array.isArray(attributes?.fields) ? attributes.fields as string[] : [];
   
   // Transformar fields a Attributes del frontend
-  const frontendAttributes = fields.map((field, index) => ({
-    id: `field_${index}`,
+  // IMPORTANTE: Usamos el nombre del campo como ID para que coincida con las keys en ra.attributes
+  const frontendAttributes = fields.map((field) => ({
+    id: field, // ✅ Usar el nombre del campo como ID (no field_0, field_1...)
     name: field,
     type: "string" as const, // Por defecto string, se puede mejorar con lógica
   }));

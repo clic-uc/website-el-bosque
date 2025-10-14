@@ -42,11 +42,10 @@ export interface RecordAttribute {
 
 export interface GeographicalRecord {
   id: number;
-  roleId: string;
   lat: number;
   lon: number;
   summary?: string;
-  role?: Role;
+  role?: Role; // ✅ El roleId viene dentro de role.roleId
   recordAttributes?: RecordAttribute[];
   createdAt: string;
   updatedAt: string;

@@ -8,7 +8,8 @@ Frontend del proyecto "El Bosque" — aplicación web para visualización y gest
 - **Vite 6.2.0** - Build tool y dev server
 - **TypeScript 5.8.3** - Tipado estático
 - **Tailwind CSS 3.4.17** - Estilos utility-first
-- **Leaflet + React-Leaflet** - Mapas interactivos
+- **Leaflet + React-Leaflet 4.2.1** - Mapas interactivos
+- **react-leaflet-cluster 3.1.1** - Clustering de markers para performance
 - **TanStack Query v5** - Manejo de estado servidor
 - **Axios** - Cliente HTTP
 - **React Router v7** - Navegación
@@ -34,9 +35,10 @@ src/
 │   ├── common/
 │   │   └── Navbar.tsx         # Barra de navegación
 │   └── map/
-│       ├── MapDisplay.tsx     # Componente principal del mapa
+│       ├── MapDisplay.tsx     # Componente principal del mapa con clustering
+│       ├── SearchBar.tsx      # Búsqueda de records por Rol SII
 │       ├── SideBar.tsx        # Sidebar con selección de mapas
-│       ├── SidePanel.tsx      # Panel lateral para editar shapes
+│       ├── SidePanel.tsx      # Panel lateral para editar atributos de shapes
 │       └── ShapeInput.tsx     # Input manual de coordenadas
 ├── hooks/                      # Custom hooks
 │   ├── useMaps.ts             # CRUD de mapas
@@ -83,8 +85,14 @@ GeographicalRecord {
   id: number
   lat: number
   lon: number
-  roleId: string
+  role?: Role              // Relación con Role entity
   recordAttributes: RecordAttribute[]
+}
+
+Role {
+  roleId: string           // Rol SII (ej: "05708-00007")
+  lat?: number
+  lon?: number
 }
 
 RecordAttribute {
@@ -114,7 +122,11 @@ AnyShape = PointShape | LineShape | PolyShape
   type: "point" | "line" | "poly"
   layerId: string          // = mapId.toString()
   coordinates: [lat, lon] | [...] | [[...]]
-  attributes: Record<string, unknown>
+  attributes: {
+    recordId: number
+    "Rol SII": string      // Role ID del record
+    ...                    // Otros atributos dinámicos del mapa
+  }
 }
 ```
 
@@ -180,10 +192,10 @@ const { mutate } = useDeleteMap();
 
 ```typescript
 // Solo carga records de mapas activos con coordenadas
-const { data } = useRecords({
+const { data, isLoading } = useRecords({
   mapId: 5, // Requerido
   hasCoordinates: true, // Filtro server-side
-  limit: 100,
+  limit: 5000, // Límite aumentado para clustering
 });
 ```
 
@@ -251,27 +263,46 @@ Componente contenedor principal que:
 
 - Gestiona estado de mapas activos (`activeMaps`)
 - Gestiona shapes locales creados por el usuario (`localShapes`)
+- Gestiona búsqueda de records por Rol SII (`selectedShapeFromSearch`)
 - Fetches de datos con `useMaps()` y `useRecords()`
 - Combina shapes del backend con shapes locales
 - Maneja callbacks de creación/edición/eliminación
+- Activa mapas automáticamente al seleccionar resultado de búsqueda
+
+### SearchBar (`components/map/SearchBar.tsx`)
+
+Componente de búsqueda superior que:
+
+- Permite buscar records por Rol SII (case insensitive)
+- Muestra dropdown con hasta 10 resultados
+- Displays: Rol SII, Record ID, coordenadas
+- Click en resultado activa el mapa y hace zoom automático
+- Funciona con markers agrupados en clusters
 
 ### MapDisplay (`components/map/MapDisplay.tsx`)
 
 Componente Leaflet que:
 
-- Renderiza el mapa interactivo
+- Renderiza el mapa interactivo con clustering de markers
 - Muestra markers/polylines/polygons según shapes
+- **Clustering**: Agrupa markers cercanos para mejor performance
+  - Configuración: `maxClusterRadius: 50`, `chunkedLoading: true`
+  - Separación: Point shapes con clustering, poly/line sin clustering
+- Zoom programático: `MapZoomHandler` para centrar mapa desde búsqueda
 - Habilita herramientas de dibujo (react-leaflet-draw)
 - Maneja eventos de interacción (click, edit, delete)
 - Emite eventos hacia MapPage mediante callbacks
+- Preserva selección al agrupar/desagrupar markers
 
 Props principales:
 
 ```typescript
 {
-  maps: Map[]              // Mapas con sus shapes
-  activeMap: Map           // Mapa seleccionado para dibujo
-  activeMaps: number[]     // IDs de mapas visibles
+  maps: Map[]                          // Mapas con sus shapes
+  activeMap: Map                       // Mapa seleccionado para dibujo
+  activeMaps: number[]                 // IDs de mapas visibles
+  selectedShapeFromSearch?: AnyShape   // Shape seleccionado desde búsqueda
+  onSearchShapeCleared?: () => void    // Callback al terminar zoom
   onCreateShape: (shape, success, error) => void
   onUpdateShape: (shape, success, error) => void
   onDeleteShape: (id, success, error) => void
@@ -304,12 +335,14 @@ Estructura:
 
 ### SidePanel (`components/map/SidePanel.tsx`)
 
-Panel emergente para editar attributes de un shape seleccionado:
+Panel emergente para visualizar y editar attributes de un shape seleccionado:
 
-- Muestra formulario dinámico según `map.attributes`
-- Permite editar valores de cada campo
+- Muestra valores actuales de todos los atributos
+- Formulario dinámico según `map.attributes`
+- Diferencia campos con datos vs. campos vacíos ("Sin valor")
 - Botón "Guardar" llama `onUpdateShape`
 - Botón "Cancelar" cierra el panel
+- Soporta tipos: string, number, boolean, date
 
 ## Sistema de Shapes
 
@@ -353,6 +386,22 @@ Funciones en `components/map/MapDisplay.tsx`:
 - `parseLineLatLngs(polyline)` → `[[lat, lng], ...]`
 - `parsePolyLatLngs(polygon)` → `[[[lat, lng], ...]]`
 
+### Transformación Backend → Frontend
+
+Los atributos del mapa se transforman así:
+
+```typescript
+// Backend: attributes.fields = ["Dirección", "M2", "Rol SII", ...]
+// Frontend:
+{
+  id: "Dirección",     // ✅ ID = nombre del campo
+  name: "Dirección",
+  type: "string"
+}
+```
+
+**IMPORTANTE**: El `id` del atributo debe coincidir con las claves en `RecordAttribute.attributes` (JSONB) para que el SidePanel muestre los valores correctamente.
+
 ### layerId: Identificador de Mapa
 
 Anteriormente `layerId` se usaba para "capas dentro de mapas", pero eso fue un malentendido.
@@ -367,11 +416,44 @@ Anteriormente `layerId` se usaba para "capas dentro de mapas", pero eso fue un m
 ## Limitaciones Actuales
 
 1. **Solo primer mapa activo carga records**: Si seleccionas múltiples mapas, solo se cargan records del primero.
-2. **Límite de 100 records**: Paginación no implementada en UI.
-3. **Shapes locales no persisten**: Se pierden al recargar la página.
-4. **Sin clustering**: Alta densidad de markers puede afectar performance.
-5. **Sin filtros avanzados**: No se puede buscar por atributos específicos.
-6. **SidePanel se cierra al agrupar markers**: Cuando un marker seleccionado se agrupa en un cluster (zoom out), el panel lateral se cierra automáticamente. Requiere revisión de la lógica de preservación de estado de selección.
+2. **Shapes locales no persisten**: Se pierden al recargar la página.
+3. **Sin filtros avanzados**: No se puede filtrar por atributos específicos (además del Rol SII).
+
+## Funcionalidades Implementadas
+
+### ✅ Clustering de Markers
+
+- **Librería**: react-leaflet-cluster 3.1.1
+- **Configuración**: `maxClusterRadius: 50`, `chunkedLoading: true`
+- **Performance**: Maneja hasta 5,000 records sin lag
+- **Separación**: Solo point shapes con clustering, poly/line sin clustering
+- **Zoom automático**: Desagrupa markers al hacer zoom
+
+### ✅ Búsqueda por Rol SII
+
+- **Ubicación**: Barra superior del mapa
+- **Funcionalidad**:
+  - Búsqueda case-insensitive
+  - Dropdown con hasta 10 resultados
+  - Muestra: Rol SII, Record ID, coordenadas
+  - Activación automática de mapa
+  - Zoom con animación a nivel 18
+- **Integración**: Funciona incluso con markers agrupados
+
+### ✅ Panel de Datos (SidePanel)
+
+- **Visualización**: Muestra valores actuales de todos los atributos
+- **Edición**: Formulario dinámico según campos del mapa
+- **Tipos soportados**: string, number, boolean, date
+- **UX**: Diferencia campos con datos ("Actual: ...") vs. vacíos ("Sin valor")
+- **Persistencia**: Los cambios se envían al backend al guardar
+
+### ✅ Optimizaciones de Performance
+
+- **Límite de records**: Aumentado de 100 a 5,000 en frontend
+- **Límite backend**: Configurado a 10,000 máximo
+- **Layout responsive**: Sin scrollbars, overflow controlado
+- **Preservación de estado**: SidePanel permanece abierto al agrupar markers
 
 ## Documentación Adicional
 
