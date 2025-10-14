@@ -9,7 +9,6 @@ import {twMerge} from "tailwind-merge";
 import SidePanel from "./SidePanel.tsx";
 import {v4} from "uuid";
 import {LatLng, type LeafletEventHandlerFnMap} from "leaflet";
-import DrawHooks from "../../hooks/useDrawHooks.tsx";
 import ShapeInput from "./ShapeInput.tsx";
 
 interface MapDisplayProps {
@@ -45,6 +44,29 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
     const [error, setError] = useState<string | null>(null);
     
+    // Debug: log when selectedShape changes
+    useEffect(() => {
+        console.log('🔍 selectedShape changed:', selectedShape?.id || 'null');
+    }, [selectedShape]);
+    
+    // Preserve selectedShape when maps update (shapes array recreated)
+    // If selectedShape exists but is stale (different instance with same ID),
+    // update it with the fresh instance from activeMap
+    useEffect(() => {
+        if (selectedShape && activeMap) {
+            const freshShape = activeMap.shapes.find(s => s.id === selectedShape.id);
+            // Only update if we found the shape AND it's a different instance
+            if (freshShape && freshShape !== selectedShape) {
+                console.log('🔄 Updating selectedShape with fresh instance:', freshShape.id);
+                setSelectedShape(freshShape);
+            } else if (!freshShape) {
+                // Shape was removed from the map, deselect it
+                console.log('❌ Selected shape removed from map, deselecting');
+                setSelectedShape(null);
+            }
+        }
+    }, [activeMap, activeMap.shapes, selectedShape]);
+    
     const layerRefs = useRef<Record<string, any>>({});
     const featureGroupRef = useRef<L.FeatureGroup>(null);
     const inputGroupRef = useRef<L.FeatureGroup>(null);
@@ -56,10 +78,23 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     useEffect(() => {
         Object.keys(layerRefs.current).forEach(id => {
             const layer = layerRefs.current[id];
-            if (selectedShape && id === selectedShape.id) {
-                layer.editing.enable();
-            } else {
-                layer.editing.disable();
+            
+            // Defensive check: ensure layer and editing exist
+            // Markers inside MarkerClusterGroup may be removed from DOM when clustered
+            if (!layer || !layer.editing) {
+                return;
+            }
+            
+            try {
+                if (selectedShape && id === selectedShape.id) {
+                    layer.editing.enable();
+                } else {
+                    layer.editing.disable();
+                }
+            } catch (error) {
+                // Silently handle errors when layer is no longer in the map
+                // (e.g., marker clustered or removed)
+                console.debug('Could not toggle editing for layer:', id, error);
             }
         })
     }, [selectedShape]);
@@ -359,9 +394,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                                 {pointShapes.map(shape => (
                                     <Marker
                                         ref={el => {
+                                            // Store ref when marker is mounted
                                             if (el && layerRefs.current && map === activeMap) {
                                                 layerRefs.current[shape.id] = el;
                                             }
+                                            // When el is null (marker unmounted/clustered),
+                                            // DON'T delete the ref - keep it for state tracking
+                                            // This allows selectedShape to remain active even when clustered
                                         }}
                                         key={shape.id}
                                         position={shape.coordinates}
