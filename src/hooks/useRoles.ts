@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rolesService } from '../services/api.service';
 import { queryKeys } from '../lib/query-client';
-import type { CreateRoleDto, UpdateRoleDto, PaginationQueryParams } from '../types/api.types';
+import type { CreateRoleDto, UpdateRoleDto, RecordsQueryParams } from '../types/api.types';
 
 /**
- * Hook para obtener roles paginados
+ * Hook para obtener todos los roles
+ * Parámetros opcionales: search para filtrar por texto
  */
-export const useRoles = (params?: PaginationQueryParams) => {
+export const useRoles = (params?: RecordsQueryParams) => {
   return useQuery({
     queryKey: queryKeys.roles.list(params),
     queryFn: () => rolesService.getAll(params),

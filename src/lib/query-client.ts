@@ -60,6 +60,8 @@ export const queryKeys = {
     lists: () => [...queryKeys.records.all, 'list'] as const,
     list: (params?: { page?: number; limit?: number; search?: string }) => 
       [...queryKeys.records.lists(), params] as const,
+    paginated: (params: { page: number; limit: number; search?: string }) => 
+      [...queryKeys.records.lists(), 'paginated', params] as const,
     details: () => [...queryKeys.records.all, 'detail'] as const,
     detail: (id: number) => [...queryKeys.records.details(), id] as const,
   },

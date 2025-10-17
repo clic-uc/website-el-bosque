@@ -45,7 +45,7 @@ export interface GeographicalRecord {
   lat: number;
   lon: number;
   summary?: string;
-  role?: Role; // ✅ El roleId viene dentro de role.roleId
+  role?: Role; // El roleId viene dentro de role.roleId
   recordAttributes?: RecordAttribute[];
   createdAt: string;
   updatedAt: string;
@@ -95,28 +95,34 @@ export interface UpdateRecordDto {
   summary?: string;
 }
 
-// Pagination
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: PaginationMeta;
-}
-
-export interface PaginationQueryParams {
-  page?: number;
-  limit?: number;
+// Query Params
+export interface RecordsQueryParams {
   search?: string;
   mapId?: number;
-  hasCoordinates?: boolean;
+  hasCoordinates?: boolean; // Filtrar solo records con coordenadas válidas (lat y lon no nulos)
+  page?: number; 
+  limit?: number;
 }
+
+export interface PaginatedRecordsParams extends Omit<RecordsQueryParams, 'page' | 'limit'> {
+  page: number;
+  limit: number;
+}
+
+// Pagination (Legacy - no longer used, backend returns all records in one call)
+// export interface PaginationMeta {
+//   total: number;
+//   page: number;
+//   limit: number;
+//   totalPages: number;
+//   hasNextPage: boolean;
+//   hasPreviousPage: boolean;
+// }
+
+// export interface PaginatedResponse<T> {
+//   data: T[];
+//   meta: PaginationMeta;
+// }
 
 // Import/Bulk
 export interface BulkImportSummary {

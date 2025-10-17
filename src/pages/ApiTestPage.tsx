@@ -9,19 +9,19 @@ export default function ApiTestPage() {
   // Fetch de mapas
   const { data: mapsData, isLoading: mapsLoading, error: mapsError } = useMaps();
 
-  // Fetch de roles (primera página, 20 items)
+  // Fetch de roles
   const {
     data: rolesData,
     isLoading: rolesLoading,
     error: rolesError,
-  } = useRoles({ page: 1, limit: 20 });
+  } = useRoles();
 
-  // Fetch de records (primera página, 20 items)
+  // Fetch de records
   const {
     data: recordsData,
     isLoading: recordsLoading,
     error: recordsError,
-  } = useRecords({ page: 1, limit: 20 });
+  } = useRecords();
 
   return (
     <div className="p-8 space-y-8">
@@ -60,13 +60,10 @@ export default function ApiTestPage() {
         {rolesData && (
           <div>
             <p className="mb-2">
-              <strong>Total Roles:</strong> {rolesData.meta.total}
-            </p>
-            <p className="mb-2">
-              <strong>Page:</strong> {rolesData.meta.page} of {rolesData.meta.totalPages}
+              <strong>Total Roles:</strong> {rolesData.length}
             </p>
             <ul className="space-y-2">
-              {rolesData.data.slice(0, 5).map((role) => (
+              {rolesData.slice(0, 5).map((role) => (
                 <li key={role.roleId} className="bg-gray-100 p-3 rounded">
                   <strong>{role.roleId}</strong>
                   {role.lat && role.lon && (
@@ -91,14 +88,10 @@ export default function ApiTestPage() {
         {recordsData && (
           <div>
             <p className="mb-2">
-              <strong>Total Records:</strong> {recordsData.meta.total}
-            </p>
-            <p className="mb-2">
-              <strong>Page:</strong> {recordsData.meta.page} of{' '}
-              {recordsData.meta.totalPages}
+              <strong>Total Records:</strong> {recordsData.length}
             </p>
             <ul className="space-y-2">
-              {recordsData.data.slice(0, 5).map((record) => (
+              {recordsData.slice(0, 5).map((record) => (
                 <li key={record.id} className="bg-gray-100 p-3 rounded">
                   <strong>Record #{record.id}</strong> - Role: {record.role?.roleId || 'N/A'}
                   <span className="ml-2 text-sm text-gray-600">

@@ -34,17 +34,16 @@ const MapPage = () => {
   const { data: recordsData } = useRecords({ 
     mapId: firstActiveMapId,
     hasCoordinates: true,
-    limit: 5000  // Límite aumentado para probar clustering con muchos datos
   });
 
   // Transform records to shapes
   // layerId ahora = mapId (corrigiendo el malentendido original)
   const shapesFromRecords = useMemo(() => {
-    if (!recordsData?.data) return {};
+    if (!recordsData) return {};
     
     const shapesByMap: Record<number, AnyShape[]> = {};
     
-    recordsData.data.forEach((record) => {
+    recordsData.forEach((record) => {
       // El backend ya filtró por hasCoordinates, pero doble check por seguridad
       if (!record.lat || !record.lon) return;
       

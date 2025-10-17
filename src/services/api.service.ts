@@ -10,8 +10,7 @@ import type {
   GeographicalRecord,
   CreateRecordDto,
   UpdateRecordDto,
-  PaginatedResponse,
-  PaginationQueryParams,
+  RecordsQueryParams,
   BulkImportSummary,
   SeedSummary,
 } from '../types/api.types';
@@ -49,8 +48,8 @@ export const mapsService = {
  * Roles API Service
  */
 export const rolesService = {
-  getAll: async (params?: PaginationQueryParams): Promise<PaginatedResponse<Role>> => {
-    const { data } = await apiClient.get<PaginatedResponse<Role>>(API_ENDPOINTS.roles, {
+  getAll: async (params?: RecordsQueryParams): Promise<Role[]> => {
+    const { data } = await apiClient.get<Role[]>(API_ENDPOINTS.roles, {
       params,
     });
     return data;
@@ -95,8 +94,8 @@ export const rolesService = {
  * Records API Service
  */
 export const recordsService = {
-  getAll: async (params?: PaginationQueryParams): Promise<PaginatedResponse<GeographicalRecord>> => {
-    const { data } = await apiClient.get<PaginatedResponse<GeographicalRecord>>(
+  getAll: async (params?: RecordsQueryParams): Promise<GeographicalRecord[]> => {
+    const { data } = await apiClient.get<GeographicalRecord[]>(
       API_ENDPOINTS.records,
       { params }
     );
