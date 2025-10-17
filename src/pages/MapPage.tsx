@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useMaps } from "../hooks/useMaps";
 import { useRecords } from "../hooks/useRecords";
 import { transformBackendMapToFrontend } from "../utils/mapTransformers";
+import type { GeographicalRecord } from "../types/api.types";
 
 const MapPage = () => {
   // Fetch maps from backend
@@ -31,26 +32,27 @@ const MapPage = () => {
   
   // TODO: Mejorar para fetchear records de TODOS los mapas activos, no solo el primero
   // Opciones: 1) Múltiples queries paralelas, 2) Backend soporta multiple mapIds
-  const { data: recordsData } = useRecords({ 
-    mapId: firstActiveMapId,
-    hasCoordinates: true,
-  });
+  const { data: recordsData } = useRecords(
+    firstActiveMapId ? { mapId: firstActiveMapId, hasCoordinates: true } : undefined
+  );
 
   // Transform records to shapes
-  // layerId ahora = mapId (corrigiendo el malentendido original)
   const shapesFromRecords = useMemo(() => {
-    if (!recordsData) return {};
+    // Normalizar recordsData: puede ser array directo o objeto paginado { data, meta }
+    const recordsList = Array.isArray(recordsData)
+      ? recordsData
+      : (recordsData as unknown as { data?: GeographicalRecord[] })?.data ?? [];
+
+    if (!recordsList || recordsList.length === 0) return {};
     
     const shapesByMap: Record<number, AnyShape[]> = {};
     
-    recordsData.forEach((record) => {
+    recordsList.forEach((record: GeographicalRecord) => {
       // El backend ya filtró por hasCoordinates, pero doble check por seguridad
       if (!record.lat || !record.lon) return;
-      
-      // Cada record puede estar asociado a múltiples mapas via recordAttributes
+
       if (record.recordAttributes && record.recordAttributes.length > 0) {
-        record.recordAttributes.forEach((ra, index) => {
-          // Validación defensiva: asegurar que ra existe y tiene mapId
+        record.recordAttributes.forEach((ra, index: number) => {
           if (!ra || !ra.mapId) {
             console.warn('⚠️ Record con recordAttribute inválido:', {
               recordId: record.id,
@@ -70,13 +72,13 @@ const MapPage = () => {
           
           shapesByMap[ra.mapId].push({
             id: `record-${record.id}`,
-            type: "point", // TODO: Soportar line y poly cuando existan en el backend
-            layerId: ra.mapId.toString(), // ✅ layerId = mapId (corregido)
+            type: "point",
+            layerId: ra.mapId.toString(),
             coordinates: [record.lat, record.lon],
             attributes: {
               recordId: record.id,
-              "Rol SII": record.role?.roleId || "", // ✅ Agregar Rol SII como atributo
-              ...(ra.attributes || {}), // Atributos específicos para este mapa
+              "Rol SII": record.role?.roleId || "",
+              ...(ra.attributes || {}),
             },
           });
         });
