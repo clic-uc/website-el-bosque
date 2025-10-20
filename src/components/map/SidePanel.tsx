@@ -10,7 +10,7 @@ interface SidePanelProps {
     save: ((updatedAttributes: Record<string, string | number | boolean>) => void) | null;
 }
 
-const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save}) => {
+const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel}) => {
 
     const [attributes, setAttributes] = useState<Record<string, string | number | boolean>>(shape?.attributes || {});
 
@@ -113,7 +113,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                 >Cancelar</button>
                 <button
                     className={"flex-auto bg-primary hover:bg-primary-light transition-colors text-white p-2 rounded-md cursor-pointer font-medium"}
-                    onClick={() => {if (save) save({...attributes})}}
+                    onClick={() => alert('Funcionalidad de actualizar datos en desarrollo')}
                 >Guardar</button>
             </div>
         </div>

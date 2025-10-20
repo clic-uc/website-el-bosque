@@ -3,6 +3,7 @@ import MapDisplay from "../components/map/MapDisplay.tsx";
 import { AnyShape } from "../types/Shape.tsx";
 import SideBar from "../components/map/SideBar.tsx";
 import SearchBar from "../components/map/SearchBar.tsx";
+import FeaturesAnnouncementModal from "../components/common/FeaturesAnnouncementModal.tsx";
 import { useMemo, useState } from "react";
 import { useMaps } from "../hooks/useMaps";
 import { useRecords } from "../hooks/useRecords";
@@ -26,6 +27,9 @@ const MapPage = () => {
 
   // State: Shape seleccionado desde búsqueda (para centrar mapa)
   const [selectedShapeFromSearch, setSelectedShapeFromSearch] = useState<AnyShape | null>(null);
+
+  // State: Modal de features visible al entrar
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(true);
 
   // Fetch records SOLO para los mapas activos con coordenadas válidas
   const firstActiveMapId = activeMaps[0];
@@ -225,18 +229,46 @@ const MapPage = () => {
 
   return (
     <div className="flex w-screen h-screen overflow-hidden">
+      {/* Modal de anuncios de features */}
+      <FeaturesAnnouncementModal
+        isOpen={isAnnouncementModalOpen}
+        onClose={() => setIsAnnouncementModalOpen(false)}
+      />
+      
       <SideBar
         maps={mapsForDisplay}
         activeMaps={activeMaps}
         onToggleMap={handleToggleMap}
       />
       <div className="flex-1 relative flex flex-col">
-        {/* Barra de búsqueda superior */}
-        <div className="flex-shrink-0 bg-white border-b shadow-sm p-3 z-[1500]">
+        {/* Barra de búsqueda y botones superiores */}
+        <div className="flex-shrink-0 bg-white border-b shadow-sm p-3 z-[1500] flex items-center gap-3">
           <SearchBar
             shapes={allShapes}
             onResultSelect={handleSearchResultSelect}
           />
+          
+          {/* Botones de acciones */}
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => alert('Funcionalidad de Subdividir en desarrollo')}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+            >
+              Subdividir
+            </button>
+            <button
+              onClick={() => alert('Funcionalidad de Fusionar en desarrollo')}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+            >
+              Fusionar
+            </button>
+            <button
+              onClick={() => alert('Funcionalidad de Ver en Tabla en desarrollo')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Ver en tabla
+            </button>
+          </div>
         </div>
         
         {/* Mapa */}
