@@ -10,45 +10,95 @@ const FeaturesAnnouncementModal: React.FC<FeaturesAnnouncementModalProps> = ({ i
 
   const features = [
     {
-      title: "🗺️ Clustering de Markers",
-      status: "✅ Completado",
-      description: "Agrupación inteligente de marcadores para mejor rendimiento con datasets grandes (hasta 5,000 records)."
+      title: "Visualización de registros",
+      status: "Completado",
+      description: "Selección de capas de registros georreferenciados con visualización en mapa."
     },
     {
-      title: "🔍 Búsqueda por Rol SII",
-      status: "✅ Completado",
-      description: "Barra de búsqueda superior que permite encontrar records por Rol SII con zoom automático."
+      title: "Clustering de Marcadores",
+      status: "Completado",
+      description: "Agrupación inteligente de marcadores para mejor rendimiento con datasets grandes."
     },
     {
-      title: "📊 Panel de Atributos",
-      status: "✅ Completado",
-      description: "Visualización y edición de atributos de records con validación de tipos."
+      title: "Búsqueda por Rol SII",
+      status: "Completado",
+      description: "Barra de búsqueda superior que permite encontrar registros por Rol SII con zoom automático."
     },
     {
-      title: "📤 Importación CSV",
-      status: "✅ Completado",
-      description: "Carga masiva de records desde archivos CSV para cualquier mapa."
+      title: "Importación CSV",
+      status: "Completado",
+      description: "Carga masiva de registros desde archivos CSV para cualquier mapa."
     },
     {
-      title: "✂️ Subdividir Records",
-      status: "🚧 En desarrollo",
+      title: "Panel de Atributos",
+      status: "En desarrollo",
+      description: "Visualización y edición de atributos de registros con validación de tipos."
+    },
+    {
+      title: "Subdividir registros",
+      status: "En desarrollo",
       description: "Dividir un record en múltiples partes manteniendo referencias."
     },
     {
-      title: "🔗 Fusionar Records",
-      status: "🚧 En desarrollo",
-      description: "Combinar múltiples records en uno solo preservando información."
+      title: "Fusionar registros",
+      status: "En desarrollo",
+      description: "Combinar múltiples registros en uno solo preservando información."
     },
     {
-      title: "📋 Vista en Tabla",
-      status: "🚧 En desarrollo",
-      description: "Visualización tabular de records con paginación y filtros avanzados."
+      title: "Importación datos existentes",
+      status: "En desarrollo",
+      description: "Importar capas de datos georreferenciados existentes al sistema."
     },
     {
-      title: "🗂️ Múltiples Mapas Activos",
-      status: "📋 Planificado",
-      description: "Soporte para cargar records de múltiples mapas simultáneamente."
-    }
+      title: "Importación polígonos",
+      status: "En desarrollo",
+      description: "Agregar polígonos de villas poblaciones y sectores."
+    },
+    {
+      title: "Vista en Tabla",
+      status: "En desarrollo",
+      description: "Visualización tabular de registros con paginación y filtros avanzados."
+    },
+    {
+      title: "Múltiples Mapas Activos",
+      status: "Planificado",
+      description: "Soporte para cargar registros de múltiples mapas simultáneamente."
+    },
+    {
+      title: "Iconografía de capas",
+      status: "Planificado",
+      description: "Cargar iconografía personalizada de capas en el mapa."
+    },
+    {
+      title: "Información detallada de un registro",
+      status: "Planificado",
+      description: "Mostrar información ampliada al seleccionar un registro en el mapa si se incluye en múltiples capas."
+    },
+    {
+      title: "Campos adicionales para registros",
+      status: "Planificado",
+      description: "Agregar campo libre de texto para comentarios y campo de link a documentos externos."
+    },
+    {
+      title: "Agregar interfaz de capas",
+      status: "Planificado",
+      description: "Implementar una interfaz para generar y editar capas."
+    },
+    {
+      title: "Auditoría de cambios",
+      status: "Planificado",
+      description: "Registrar cambios realizados en los registros."
+    },
+    {
+      title: "Modificar coordenadas de un registro",
+      status: "Planificado",
+      description: "Permitir la edición manual de las coordenadas geográficas de un registro."
+    },
+    {
+      title: "Manejo de sesiones y roles",
+      status: "Planificado",
+      description: "Implementar autenticación y autorización de usuarios con roles específicos."
+    },
   ];
 
   return (
@@ -59,9 +109,6 @@ const FeaturesAnnouncementModal: React.FC<FeaturesAnnouncementModalProps> = ({ i
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-2xl font-bold mb-2">🚀 Bienvenido a Georreferenciación DOM</h2>
-              <p className="text-primary-light text-sm opacity-90">
-                Sistema de visualización y gestión de datos georreferenciados
-              </p>
             </div>
             <button
               onClick={onClose}
