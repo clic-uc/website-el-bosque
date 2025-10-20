@@ -8,7 +8,7 @@ export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   
   // Timeout por defecto (ms)
-  timeout: 30000,
+  timeout: 120000,
   
   // Headers por defecto
   headers: {
