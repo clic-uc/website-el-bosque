@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useImportRecords } from '../../hooks/useRecords';
 import type { Map } from '../../types/Map';
+import {ImSpinner8} from "react-icons/im";
+import {HiDotsVertical} from "react-icons/hi";
 
 interface ImportRecordsModalProps {
   maps: Map[];
@@ -8,10 +10,45 @@ interface ImportRecordsModalProps {
   onClose: () => void;
 }
 
+const mapCsv = async (file: File, delimiter = ';', length: number = 20) => {
+    const text = await file.text();
+    const total = text.split('\n').length;
+    const lines = text.split('\n').slice(0, length + 1); // +1 para incluir la línea de encabezado
+    const headers = lines[0].trim().split(delimiter).map(h => h.trim());
+    const rows = lines.slice(1).map(line => line.trim().split(delimiter).map(value => value.trim()));
+    return { headers, rows, total };
+}
+
 const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, onClose }) => {
   const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState<boolean>(false);
+  const [headerMappings, setHeaderMappings] = useState<Record<string, string | null>>({});
+  const [parsedCsv, setParsedCsv] = useState<{ headers: string[]; rows: string[][]; total: number } | null>(null);
+
+  useEffect(() => {
+      if (!selectedFile || !selectedMapId) return;
+      const selectedMap = maps.find(m => m.id === selectedMapId);
+      if (!selectedMap) return;
+      
+      const loadCsv = async () => {
+          setPreviewLoading(true);
+          const csv = await mapCsv(selectedFile);
+          setParsedCsv(csv);
+
+          const newHeaderMappings: Record<string, string | null> = {};
+          csv.headers.forEach(header => {
+              // Try to find a matching field in the map's fields
+                const matchedField = selectedMap.attributes.find(attr => attr.name.toLowerCase() === header.toLowerCase());
+              newHeaderMappings[header] = matchedField?.id || null;
+          });
+          setHeaderMappings(newHeaderMappings);
+          setPreviewLoading(false);
+      }
+
+      loadCsv();
+  }, [maps, selectedFile, selectedMapId]);
 
   const { mutate: importRecords, isPending, isError, error } = useImportRecords();
 
@@ -72,7 +109,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+      <div className="bg-white rounded-lg shadow-xl p-6 flex flex-col max-w-[60%]">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">Importar Records desde CSV</h2>
           <button
@@ -134,6 +171,62 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
               {errorMessage || error?.message || 'Error al importar'}
             </div>
           )}
+
+          {
+            previewLoading && (
+              <div className={"w-full flex items-center justify-center border-gray-300 border rounded-md p-2"}>
+                <ImSpinner8 className={"animate-spin"} />
+              </div>
+            )
+          }
+
+          {
+            !previewLoading && parsedCsv && headerMappings && (
+              <div className={"w-full h-[300px] border-gray-300 border rounded-md p-2 overflow-auto text-sm"}>
+                <div
+                  className={`grid`}
+                  style={{
+                    gridTemplateColumns: `repeat(${parsedCsv.headers.length}, 1fr)`,
+                    gridTemplateRows: `repeat(${parsedCsv.rows.length + 1}, 1fr)`
+                  }}
+                >
+                  {
+                    parsedCsv.headers.map((header, i) => {
+                      const mapping = headerMappings[header];
+
+                      return (
+                        <div
+                          key={`header-${header}-${i}`}
+                          className={`p-2 col-start-[${i}] row-start-0 overflow-ellipsis overflow-hidden text-nowrap w-[10rem] max-w-[20rem] border-gray-200 border-b ${i < parsedCsv.headers.length - 1 ? "border-r" : ""} ${mapping ? "bg-green-100" : "bg-red-100"} flex w-full justify-between items-center`}
+                        >
+                          {mapping || header}
+                          <div className={`p-1 aspect-square ${mapping ? "hover:bg-green-200" : "hover:bg-red-200"} transition-colors cursor-pointer rounded-full`}>
+                            <HiDotsVertical />
+                          </div>
+                        </div>
+                      )
+                    })
+                  }
+                  {
+                    parsedCsv.rows.flatMap((row, j) => row.map((item, k) => (
+                      <div
+                        key={`${k}-${j}`}
+                        className={`p-2 col-start-[${k}] row-start-[${j}] overflow-ellipsis overflow-hidden text-nowrap w-[10rem] max-w-[20rem] border-gray-200 border-b ${k < row.length - 1 ? "border-r" : ""}`}>
+                        {item}
+                      </div>
+                    )))
+                  }
+                  {
+                    parsedCsv.total > 21 && (
+                      <div className={`col-start-0 col-end-[${parsedCsv.rows.length - 1}] p-2`}>
+                        <p>+ {parsedCsv.total - 21} filas</p>
+                      </div>
+                    )
+                  }
+                </div>
+              </div>
+            )
+          }
 
           {/* Botones */}
           <div className="flex justify-end space-x-3 pt-2">
