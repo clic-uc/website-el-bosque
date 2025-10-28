@@ -1,5 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import MapDisplay from "../components/map/MapDisplay.tsx";
+import RecordsTable from "../components/table/RecordsTable.tsx";
 import { AnyShape } from "../types/Shape.tsx";
 import SideBar from "../components/map/SideBar.tsx";
 import SearchBar from "../components/map/SearchBar.tsx";
@@ -31,13 +32,20 @@ const MapPage = () => {
   // State: Modal de features visible al entrar
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(true);
 
+  // State: Vista actual (mapa o tabla)
+  const [viewMode, setViewMode] = useState<'map' | 'table'>('map');
+
   // Fetch records SOLO para los mapas activos con coordenadas válidas
   const firstActiveMapId = activeMaps[0];
   
   // TODO: Mejorar para fetchear records de TODOS los mapas activos, no solo el primero
   // Opciones: 1) Múltiples queries paralelas, 2) Backend soporta multiple mapIds
-  const { data: recordsData } = useRecords(
-    firstActiveMapId ? { mapId: firstActiveMapId, hasCoordinates: true } : undefined
+  // Para vista de mapa: solo records con coordenadas
+  // Para vista de tabla: todos los records
+  const { data: recordsData, isLoading: recordsLoading } = useRecords(
+    firstActiveMapId 
+      ? { mapId: firstActiveMapId, hasCoordinates: viewMode === 'map' ? true : undefined } 
+      : undefined
   );
 
   // Transform records to shapes
@@ -240,7 +248,7 @@ const MapPage = () => {
         activeMaps={activeMaps}
         onToggleMap={handleToggleMap}
       />
-      <div className="flex-1 relative flex flex-col">
+      <div className="flex-1 relative flex flex-col min-w-0 overflow-hidden">
         {/* Barra de búsqueda y botones superiores */}
         <div className="flex-shrink-0 bg-white border-b shadow-sm p-3 z-[1500] flex items-center gap-3">
           <SearchBar
@@ -263,27 +271,41 @@ const MapPage = () => {
               Fusionar
             </button>
             <button
-              onClick={() => alert('Funcionalidad de Ver en Tabla en desarrollo')}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
+              className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-gray-600 hover:bg-gray-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
             >
-              Ver en tabla
+              {viewMode === 'map' ? 'Ver en tabla' : 'Ver en mapa'}
             </button>
           </div>
         </div>
         
-        {/* Mapa */}
-        <div className="flex-1 relative">
-          <MapDisplay
-            maps={mapsForDisplay}
-            activeMap={activeMap}
-            activeMaps={activeMaps}
-            className="w-full h-full"
-            onCreateShape={handleCreateShape}
-            onUpdateShape={handleUpdateShape}
-            onDeleteShape={handleDeleteShape}
-            selectedShapeFromSearch={selectedShapeFromSearch}
-            onSearchShapeCleared={() => setSelectedShapeFromSearch(null)}
-          />
+        {/* Vista: Mapa o Tabla */}
+        <div className="flex-1 relative overflow-hidden">
+          {viewMode === 'map' ? (
+            <MapDisplay
+              maps={mapsForDisplay}
+              activeMap={activeMap}
+              activeMaps={activeMaps}
+              className="w-full h-full"
+              onCreateShape={handleCreateShape}
+              onUpdateShape={handleUpdateShape}
+              onDeleteShape={handleDeleteShape}
+              selectedShapeFromSearch={selectedShapeFromSearch}
+              onSearchShapeCleared={() => setSelectedShapeFromSearch(null)}
+            />
+          ) : (
+            <RecordsTable
+              records={Array.isArray(recordsData) 
+                ? recordsData 
+                : (recordsData as unknown as { data?: GeographicalRecord[] })?.data ?? []}
+              isLoading={recordsLoading}
+              mapId={firstActiveMapId}
+            />
+          )}
         </div>
       </div>
     </div>
