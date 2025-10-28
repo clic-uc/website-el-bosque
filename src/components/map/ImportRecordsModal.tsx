@@ -3,6 +3,7 @@ import { useImportRecords } from '../../hooks/useRecords';
 import type { Map } from '../../types/Map';
 import {ImSpinner8} from "react-icons/im";
 import {HiDotsVertical} from "react-icons/hi";
+import ColumnSelectMenu from "./ColumnSelectMenu.tsx";
 
 interface ImportRecordsModalProps {
   maps: Map[];
@@ -12,11 +13,15 @@ interface ImportRecordsModalProps {
 
 const mapCsv = async (file: File, delimiter = ';', length: number = 20) => {
     const text = await file.text();
+
+    // rowsText is a representation of the all the rows in the file (except header)
+    const rowsText = text.split('\n').slice(1).join('\n');
+
     const total = text.split('\n').length;
     const lines = text.split('\n').slice(0, length + 1); // +1 para incluir la línea de encabezado
     const headers = lines[0].trim().split(delimiter).map(h => h.trim());
     const rows = lines.slice(1).map(line => line.trim().split(delimiter).map(value => value.trim()));
-    return { headers, rows, total };
+    return { headers, rows, total, rowsText };
 }
 
 const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, onClose }) => {
@@ -25,7 +30,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [headerMappings, setHeaderMappings] = useState<Record<string, string | null>>({});
-  const [parsedCsv, setParsedCsv] = useState<{ headers: string[]; rows: string[][]; total: number } | null>(null);
+  const [parsedCsv, setParsedCsv] = useState<{ headers: string[]; rows: string[][]; total: number, rowsText: string } | null>(null);
 
   useEffect(() => {
       if (!selectedFile || !selectedMapId) return;
@@ -75,13 +80,20 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
       return;
     }
 
-    if (!selectedFile) {
+    if (!selectedFile || !parsedCsv) {
       setErrorMessage('Selecciona un archivo CSV');
       return;
     }
 
+    // Rewrite CSV with mapped headers
+    const csvContent = [];
+    const headers = parsedCsv.headers.map(header => headerMappings[header] ? headerMappings[header] : header);
+    csvContent.push(headers.join(';'));
+    csvContent.push(parsedCsv.rowsText);
+    const mappedCsvFile = new File([csvContent.join('\n')], selectedFile.name, { type: 'text/csv' });
+
     importRecords(
-      { mapId: selectedMapId, file: selectedFile },
+      { mapId: selectedMapId, file: mappedCsvFile },
       {
         onSuccess: (data) => {
           alert(
@@ -200,9 +212,17 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
                           className={`p-2 col-start-[${i}] row-start-0 overflow-ellipsis overflow-hidden text-nowrap w-[10rem] max-w-[20rem] border-gray-200 border-b ${i < parsedCsv.headers.length - 1 ? "border-r" : ""} ${mapping ? "bg-green-100" : "bg-red-100"} flex w-full justify-between items-center`}
                         >
                           {mapping || header}
-                          <div className={`p-1 aspect-square ${mapping ? "hover:bg-green-200" : "hover:bg-red-200"} transition-colors cursor-pointer rounded-full`}>
-                            <HiDotsVertical />
-                          </div>
+                          <ColumnSelectMenu
+                            map={maps.find(m => m.id === selectedMapId)!}
+                            usedAttrIds={headerMappings ? Object.values(headerMappings).filter(id => id !== null && id !== headerMappings[header]) as string[] : []}
+                            selectedAttr={mapping}
+                            updateSelectedAttr={(attr) => {
+                              setHeaderMappings(prev => {
+                                if (!attr) return {...prev, [header]: null};
+                                return {...prev, [header]: attr};
+                              });
+                            }}
+                          />
                         </div>
                       )
                     })
