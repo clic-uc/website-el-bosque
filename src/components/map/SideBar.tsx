@@ -6,12 +6,16 @@ type SideBarProps = {
     maps: Map[]
     activeMaps: number[]
     onToggleMap: (id: number) => void
+    isCollapsed?: boolean
+    onToggleCollapse?: () => void
 }
 
 const SideBar: React.FC<SideBarProps> = ({ 
     maps,
     activeMaps,
     onToggleMap,
+    isCollapsed = false,
+    onToggleCollapse,
 }) => {
     const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(
         new Set(["edificacion", "ejecucion", "emergencias", "vivienda"])
@@ -35,53 +39,82 @@ const SideBar: React.FC<SideBarProps> = ({
     };
 
     return (
-        <div className="w-80 flex-shrink-0 h-full bg-white shadow-md border-r p-4 flex flex-col gap-4 overflow-y-auto">
-            <div className="flex-shrink-0">
-                <h2 className="text-lg font-bold mb-3">Departamentos y Mapas</h2>
-                <div className="flex flex-col gap-2">
-                    {Object.keys(groupedMaps).map((department) => (
-                        <div key={department} className="flex flex-col mb-2">
-                            {/* Departamento */}
-                            <div 
-                                className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 p-2 rounded select-none bg-blue-100"
-                                onClick={() => toggleDepartmentExpansion(department)}
-                            >
-                                <span className="text-sm font-bold">
-                                    {expandedDepartments.has(department) ? '▼' : '▶'}
-                                </span>
-                                <span className="text-sm font-bold text-blue-900">
-                                    {getDepartmentLabel(department)}
-                                </span>
-                                <span className="text-xs text-gray-500 ml-auto">
-                                    ({groupedMaps[department].length})
-                                </span>
-                            </div>
-
-                            {/* Mapas del departamento */}
-                            {expandedDepartments.has(department) && (
-                                <div className="flex flex-col gap-1 pl-4 mt-1">
-                                    {groupedMaps[department].map((map) => (
-                                        <label 
-                                            key={map.id} 
-                                            className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={activeMaps.includes(map.id)}
-                                                onChange={() => onToggleMap(map.id)}
-                                                className="w-4 h-4 flex-shrink-0 mt-0.5"
-                                            />
-                                            <span className="text-sm font-medium break-words">
-                                                {map.name}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
+        <div className={`flex-shrink-0 h-full bg-white shadow-md border-r flex flex-col transition-all duration-300 ${
+            isCollapsed ? 'w-0 overflow-hidden' : 'w-80'
+        }`}>
+            {!isCollapsed && (
+                <div className="p-4 flex flex-col gap-4 overflow-y-auto h-full">
+                    <div className="flex-shrink-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-lg font-bold">Departamentos y Mapas</h2>
+                            {onToggleCollapse && (
+                                <button
+                                    onClick={onToggleCollapse}
+                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                    title="Colapsar barra lateral"
+                                >
+                                    <svg 
+                                        className="w-5 h-5 text-gray-600" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path 
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round" 
+                                            strokeWidth={2} 
+                                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7" 
+                                        />
+                                    </svg>
+                                </button>
                             )}
                         </div>
-                    ))}
+                        <div className="flex flex-col gap-2">
+                            {Object.keys(groupedMaps).map((department) => (
+                                <div key={department} className="flex flex-col mb-2">
+                                    {/* Departamento */}
+                                    <div 
+                                        className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 p-2 rounded select-none bg-blue-100"
+                                        onClick={() => toggleDepartmentExpansion(department)}
+                                    >
+                                        <span className="text-sm font-bold">
+                                            {expandedDepartments.has(department) ? '▼' : '▶'}
+                                        </span>
+                                        <span className="text-sm font-bold text-blue-900">
+                                            {getDepartmentLabel(department)}
+                                        </span>
+                                        <span className="text-xs text-gray-500 ml-auto">
+                                            ({groupedMaps[department].length})
+                                        </span>
+                                    </div>
+
+                                    {/* Mapas del departamento */}
+                                    {expandedDepartments.has(department) && (
+                                        <div className="flex flex-col gap-1 pl-4 mt-1">
+                                            {groupedMaps[department].map((map) => (
+                                                <label 
+                                                    key={map.id} 
+                                                    className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={activeMaps.includes(map.id)}
+                                                        onChange={() => onToggleMap(map.id)}
+                                                        className="w-4 h-4 flex-shrink-0 mt-0.5"
+                                                    />
+                                                    <span className="text-sm font-medium break-words">
+                                                        {map.name}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }

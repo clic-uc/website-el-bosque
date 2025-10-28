@@ -35,6 +35,9 @@ const MapPage = () => {
   // State: Vista actual (mapa o tabla)
   const [viewMode, setViewMode] = useState<'map' | 'table'>('map');
 
+  // State: Sidebar colapsado
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   // Fetch records SOLO para los mapas activos con coordenadas válidas
   const firstActiveMapId = activeMaps[0];
   
@@ -247,7 +250,33 @@ const MapPage = () => {
         maps={mapsForDisplay}
         activeMaps={activeMaps}
         onToggleMap={handleToggleMap}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
+      
+      {/* Botón para expandir sidebar cuando está colapsado */}
+      {isSidebarCollapsed && (
+        <button
+          onClick={() => setIsSidebarCollapsed(false)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-[1000] bg-white shadow-lg border border-gray-200 rounded-r-lg p-2 hover:bg-gray-50 transition-colors"
+          title="Expandir barra lateral"
+        >
+          <svg 
+            className="w-5 h-5 text-gray-600" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M13 5l7 7-7 7M5 5l7 7-7 7" 
+            />
+          </svg>
+        </button>
+      )}
+      
       <div className="flex-1 relative flex flex-col min-w-0 overflow-hidden">
         {/* Barra de búsqueda y botones superiores */}
         <div className="flex-shrink-0 bg-white border-b shadow-sm p-3 z-[1500] flex items-center gap-3">
