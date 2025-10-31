@@ -92,6 +92,7 @@ const MapPage = () => {
             coordinates: [record.lat, record.lon],
             attributes: {
               recordId: record.id,
+              recordAttributeId: ra.id,
               "Rol SII": record.role?.roleId || "",
               ...(ra.attributes || {}),
             },
