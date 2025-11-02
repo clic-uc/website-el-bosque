@@ -458,6 +458,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 open={selectedShape !== null}
                 cancel={cancel}
                 save={save}
+                mapId={activeMap.id}
             />
             {
                 activeMap.drawable && !selectedShape && (

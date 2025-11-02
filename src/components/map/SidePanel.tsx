@@ -1,6 +1,7 @@
 import {AnyShape} from "../../types/Shape.tsx";
 import {Attribute} from "../../types/Map.tsx";
 import {useEffect, useState} from "react";
+import {useUpdateRecord} from "../../hooks/useRecords";
 
 interface SidePanelProps {
     shape: AnyShape | null;
@@ -8,15 +9,68 @@ interface SidePanelProps {
     open: boolean;
     cancel: (() => void) | null;
     save: ((updatedAttributes: Record<string, string | number | boolean>) => void) | null;
+    mapId?: number; // Necesario para identificar qué RecordAttribute actualizar
 }
 
-const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel}) => {
-
+const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save, mapId}) => {
     const [attributes, setAttributes] = useState<Record<string, string | number | boolean>>(shape?.attributes || {});
+    const updateRecordMutation = useUpdateRecord();
 
     useEffect(() => {
         setAttributes(shape?.attributes || {});
     }, [shape]);
+
+    const handleSave = async () => {
+        if (!shape || !mapId) return;
+
+        // Extraer el recordId de los atributos del shape
+        const recordId = attributes.recordId as number;
+        
+        if (!recordId) {
+            alert('Error: No se puede actualizar. Registro sin ID.');
+            return;
+        }
+
+        // Separar atributos que son metadatos vs datos reales del record
+        const { recordId: _, recordAttributeId: __, "Rol SII": ___, ...recordAttributesData } = attributes;
+
+        try {
+            // Actualizar el Record con sus recordAttributes en el backend
+            console.log('Patch record payload:', { 
+                id: recordId, 
+                mapId,
+                recordAttributes: [{
+                    mapId: mapId,
+                    attributes: recordAttributesData
+                }]
+            });
+            
+            await updateRecordMutation.mutateAsync({
+                id: recordId,
+                dto: {
+                    recordAttributes: [{
+                        mapId: mapId,
+                        attributes: recordAttributesData
+                    }]
+                }
+            });
+
+            // Llamar también a la función save local para actualizar el UI inmediatamente
+            if (save) {
+                save(attributes);
+            }
+
+            // Cerrar el panel después de guardar exitosamente
+            if (cancel) {
+                cancel();
+            }
+        } catch (error: any) {
+            // Extraer mensaje más útil del error del servidor si está disponible
+            console.error('Error actualizando registro:', error);
+            const serverMessage = error?.response?.data?.message || error?.response?.data || error?.message;
+            alert(`Error al actualizar el registro en el servidor: ${String(serverMessage)}`);
+        }
+    };
 
     return (
         <div
@@ -110,11 +164,15 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                 <button
                     className={"flex-auto bg-gray-200 hover:bg-gray-300 transition-colors p-2 rounded-md cursor-pointer font-medium"}
                     onClick={cancel || undefined}
+                    disabled={updateRecordMutation.isPending}
                 >Cancelar</button>
                 <button
-                    className={"flex-auto bg-primary hover:bg-primary-light transition-colors text-white p-2 rounded-md cursor-pointer font-medium"}
-                    onClick={() => alert('Funcionalidad de actualizar datos en desarrollo')}
-                >Guardar</button>
+                    className={"flex-auto bg-primary hover:bg-primary-light transition-colors text-white p-2 rounded-md cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed"}
+                    onClick={handleSave}
+                    disabled={updateRecordMutation.isPending}
+                >
+                    {updateRecordMutation.isPending ? 'Guardando...' : 'Guardar'}
+                </button>
             </div>
         </div>
     )

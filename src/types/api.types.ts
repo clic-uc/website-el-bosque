@@ -93,6 +93,14 @@ export interface UpdateRecordDto {
   lat?: number;
   lon?: number;
   summary?: string;
+  recordAttributes?: Array<{
+    mapId: number;
+    attributes: Record<string, unknown>;
+  }>;
+}
+
+export interface UpdateRecordAttributeDto {
+  attributes: Record<string, unknown>;
 }
 
 // Query Params
