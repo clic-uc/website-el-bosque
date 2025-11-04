@@ -1,7 +1,7 @@
 // src/components/map/EditMapModal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useMap, useUpdateMap } from '../../hooks/useMaps.ts';
+import { useMap, useUpdateMap, useDeleteMap } from '../../hooks/useMaps.ts';
 import { Department, type UpdateMapDto } from '../../types/api.types.ts';
 import { getDepartmentLabel } from '../../utils/mapTransformers.ts';
 
@@ -22,6 +22,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
 
   const { data: map, isLoading: isLoadingMap } = useMap(mapId!);
   const updateMapMutation = useUpdateMap();
+  const deleteMapMutation = useDeleteMap();
 
   useEffect(() => {
     if (map) {
@@ -60,6 +61,22 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
     });
   };
 
+  const handleDelete = () => {
+    if (!mapId) return;
+
+    if (window.confirm(`¿Estás seguro de que quieres eliminar el mapa "${mapName}"? Esta acción no se puede deshacer.`)) {
+      deleteMapMutation.mutate(mapId, {
+        onSuccess: () => {
+          onClose();
+        },
+        onError: (error) => {
+          console.error("Error al eliminar el mapa:", error);
+          alert("Hubo un error al eliminar el mapa. Inténtalo de nuevo.");
+        }
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -70,7 +87,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-            disabled={updateMapMutation.isPending}
+            disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
           >
             &times;
           </button>
@@ -90,7 +107,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={updateMapMutation.isPending}
+                disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
                 required
               >
                 <option value="">-- Selecciona un departamento --</option>
@@ -114,7 +131,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
                 onChange={(e) => setMapName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Ej: Obras Menores"
-                disabled={updateMapMutation.isPending}
+                disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
                 required
               />
             </div>
@@ -131,28 +148,41 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Dirección&#10;Rol SII&#10;Propietario..."
                 rows={8}
-                disabled={updateMapMutation.isPending}
+                disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
                 required
               />
             </div>
 
             {/* Botones */}
-            <div className="flex justify-end space-x-3 pt-2">
+            <div className="flex justify-between items-center pt-2">
+              {/* Botón de Eliminar a la izquierda */}
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-                disabled={updateMapMutation.isPending}
+                onClick={handleDelete}
+                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
               >
-                Cancelar
+                {deleteMapMutation.isPending ? 'Eliminando...' : 'Eliminar'}
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                disabled={updateMapMutation.isPending || !department || !mapName || !attributeFields}
-              >
-                {updateMapMutation.isPending ? 'Actualizando...' : 'Actualizar'}
-              </button>
+
+              {/* Botones de Cancelar y Actualizar a la derecha */}
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                  disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  disabled={updateMapMutation.isPending || deleteMapMutation.isPending || !department || !mapName || !attributeFields}
+                >
+                  {updateMapMutation.isPending ? 'Actualizando...' : 'Actualizar'}
+                </button>
+              </div>
             </div>
           </form>
         )}
