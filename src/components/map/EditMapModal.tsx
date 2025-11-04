@@ -20,7 +20,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
   const [mapName, setMapName] = useState<string>('');
   const [attributeFields, setAttributeFields] = useState<string>('');
 
-  const { data: map, isLoading: isLoadingMap } = useMap(mapId!);
+  const { data: map, isLoading: isLoadingMap } = useMap(mapId);
   const updateMapMutation = useUpdateMap();
   const deleteMapMutation = useDeleteMap();
 
