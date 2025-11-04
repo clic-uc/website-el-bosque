@@ -123,7 +123,7 @@ const SideBar: React.FC<SideBarProps> = ({
                                                     <button
                                                         type="button"
                                                         onClick={(e) => { e.stopPropagation(); onEditMapClick?.(map); }}
-                                                        className="ml-auto p-1 rounded hover:bg-gray-100 text-gray-600 transition-colors transition-opacity duration-150 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                                                        className="ml-auto p-1 rounded hover:bg-gray-100 text-gray-600 transition-all duration-150 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
                                                         title="Más opciones"
                                                         aria-label={`Más opciones para ${map.name}`}
                                                     >
