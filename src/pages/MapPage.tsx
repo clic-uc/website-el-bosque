@@ -284,7 +284,7 @@ const MapPage = () => {
       <EditMapModal
         isOpen={isEditMapModalOpen}
         onClose={handleCloseEditMapModal}
-        maps={mapsForDisplay}
+        mapId={editingMap ? editingMap.id : null}
       />
       
       <SideBar
