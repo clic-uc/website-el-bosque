@@ -10,6 +10,9 @@ import { useMaps } from "../hooks/useMaps";
 import { useRecords } from "../hooks/useRecords";
 import { transformBackendMapToFrontend } from "../utils/mapTransformers";
 import type { GeographicalRecord } from "../types/api.types";
+import AddMapModal from "../components/map/AddMapModal.tsx";
+import EditMapModal from "../components/map/EditMapModal.tsx";
+import type { Map } from "../types/Map.tsx";
 
 const MapPage = () => {
   // Fetch maps from backend
@@ -37,6 +40,13 @@ const MapPage = () => {
 
   // State: Sidebar colapsado
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // State: Modal de añadir mapa
+  const [isAddMapModalOpen, setAddMapModalOpen] = useState(false);
+
+  // State: Modal de editar mapa
+  const [isEditMapModalOpen, setEditMapModalOpen] = useState(false);
+  const [editingMap, setEditingMap] = useState<Map | null>(null);
 
   // Fetch records SOLO para los mapas activos con coordenadas válidas
   const firstActiveMapId = activeMaps[0];
@@ -205,6 +215,26 @@ const MapPage = () => {
     }));
     success();
   };
+  // State y handlers para AddMapModal
+  const handleOpenAddMapModal = () => {
+      setAddMapModalOpen(true); // 2. Función para abrir
+  };
+
+  const handleCloseAddMapModal = () => {
+      setAddMapModalOpen(false); // 2. Función para cerrar
+  };
+
+  // Handlers para EditMapModal
+  const handleOpenEditMapModal = (map: Map) => {
+    setEditingMap(map);
+    setEditMapModalOpen(true);
+  };
+
+  const handleCloseEditMapModal = () => {
+    setEditingMap(null);
+    setEditMapModalOpen(false);
+  };
+
 
   // Loading states
   if (mapsLoading) {
@@ -246,6 +276,16 @@ const MapPage = () => {
         isOpen={isAnnouncementModalOpen}
         onClose={() => setIsAnnouncementModalOpen(false)}
       />
+      <AddMapModal 
+        isOpen={isAddMapModalOpen}
+        onClose={handleCloseAddMapModal}
+        maps={mapsForDisplay}
+      />
+      <EditMapModal
+        isOpen={isEditMapModalOpen}
+        onClose={handleCloseEditMapModal}
+        maps={mapsForDisplay}
+      />
       
       <SideBar
         maps={mapsForDisplay}
@@ -253,6 +293,8 @@ const MapPage = () => {
         onToggleMap={handleToggleMap}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onAddMapClick={handleOpenAddMapModal}
+        onEditMapClick={handleOpenEditMapModal}
       />
       
       {/* Botón para expandir sidebar cuando está colapsado */}

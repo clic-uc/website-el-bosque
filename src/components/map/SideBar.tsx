@@ -8,6 +8,8 @@ type SideBarProps = {
     onToggleMap: (id: number) => void
     isCollapsed?: boolean
     onToggleCollapse?: () => void
+    onAddMapClick?: () => void
+    onEditMapClick?: (map: Map) => void
 }
 
 const SideBar: React.FC<SideBarProps> = ({ 
@@ -16,6 +18,8 @@ const SideBar: React.FC<SideBarProps> = ({
     onToggleMap,
     isCollapsed = false,
     onToggleCollapse,
+    onAddMapClick,
+    onEditMapClick,
 }) => {
     const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(
         new Set(["edificacion", "ejecucion", "emergencias", "vivienda"])
@@ -47,27 +51,38 @@ const SideBar: React.FC<SideBarProps> = ({
                     <div className="flex-shrink-0">
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-lg font-bold">Departamentos y Mapas</h2>
-                            {onToggleCollapse && (
+                            <div className="flex items-center">
                                 <button
-                                    onClick={onToggleCollapse}
+                                    onClick={onAddMapClick}
                                     className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                    title="Colapsar barra lateral"
+                                    title="Añadir mapa"
                                 >
-                                    <svg 
-                                        className="w-5 h-5 text-gray-600" 
-                                        fill="none" 
-                                        stroke="currentColor" 
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={2} 
-                                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7" 
-                                        />
+                                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
                                     </svg>
                                 </button>
-                            )}
+                                {onToggleCollapse && (
+                                    <button
+                                        onClick={onToggleCollapse}
+                                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                        title="Colapsar barra lateral"
+                                    >
+                                        <svg 
+                                            className="w-5 h-5 text-gray-600" 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round" 
+                                                strokeWidth={2} 
+                                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7" 
+                                            />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         <div className="flex flex-col gap-2">
                             {Object.keys(groupedMaps).map((department) => (
@@ -94,7 +109,7 @@ const SideBar: React.FC<SideBarProps> = ({
                                             {groupedMaps[department].map((map) => (
                                                 <label 
                                                     key={map.id} 
-                                                    className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
+                                                    className="group flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
                                                 >
                                                     <input
                                                         type="checkbox"
@@ -105,6 +120,18 @@ const SideBar: React.FC<SideBarProps> = ({
                                                     <span className="text-sm font-medium break-words">
                                                         {map.name}
                                                     </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); onEditMapClick?.(map); }}
+                                                        className="ml-auto p-1 rounded hover:bg-gray-100 text-gray-600 transition-colors transition-opacity duration-150 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                                                        title="Más opciones"
+                                                        aria-label={`Más opciones para ${map.name}`}
+                                                    >
+                                                        <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                            <path d="M6 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM12 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM18 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
+                                                        </svg>
+                                                    </button>
+                                                    
                                                 </label>
                                             ))}
                                         </div>
