@@ -91,11 +91,14 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
               required
             >
               <option value="">-- Selecciona un departamento --</option>
-              {Object.keys(groupedMaps).map((dept) => (
-                <option key={dept.charAt(0).toUpperCase() + dept.slice(1)} value={dept.charAt(0).toUpperCase() + dept.slice(1)}>
-                  {getDepartmentLabel(dept)}
-                </option>
-              ))}
+              {Object.keys(groupedMaps).map((dept) => {
+                const capitalizedDept = dept.charAt(0).toUpperCase() + dept.slice(1);
+                return (
+                  <option key={capitalizedDept} value={capitalizedDept}>
+                    {getDepartmentLabel(dept)}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
