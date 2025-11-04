@@ -24,6 +24,8 @@ const SideBar: React.FC<SideBarProps> = ({
     const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(
         new Set(["edificacion", "ejecucion", "emergencias", "vivienda"])
     );
+    const [showPolygons, setShowPolygons] = useState<boolean>(true);
+    const [activePolygons, setActivePolygons] = useState<Set<string>>(new Set());
 
     // Agrupar mapas por departamento
     const groupedMaps = useMemo(() => {
@@ -139,6 +141,94 @@ const SideBar: React.FC<SideBarProps> = ({
                                 </div>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Sección de Polígonos */}
+                    <div className="flex-shrink-0 border-t pt-4">
+                        <div 
+                            className="flex items-center gap-2 cursor-pointer hover:bg-purple-50 p-2 rounded select-none bg-purple-100 mb-2"
+                            onClick={() => setShowPolygons(!showPolygons)}
+                        >
+                            <span className="text-sm font-bold">
+                                {showPolygons ? '▼' : '▶'}
+                            </span>
+                            <span className="text-sm font-bold text-purple-900">
+                                Polígonos
+                            </span>
+                            <span className="text-xs text-gray-500 ml-auto">
+                                (3)
+                            </span>
+                        </div>
+
+                        {showPolygons && (
+                            <div className="flex flex-col gap-1 pl-4">
+                                {/* Polígono 1 - Comuna */}
+                                <label className="group flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={activePolygons.has('comuna')}
+                                        onChange={() => {
+                                            const newSet = new Set(activePolygons);
+                                            if (newSet.has('comuna')) {
+                                                newSet.delete('comuna');
+                                            } else {
+                                                newSet.add('comuna');
+                                            }
+                                            setActivePolygons(newSet);
+                                            console.log('🗺️ Toggle polígono (mockup):', 'comuna');
+                                        }}
+                                        className="w-4 h-4 flex-shrink-0 mt-0.5"
+                                    />
+                                    <span className="text-sm font-medium break-words">
+                                        Comuna
+                                    </span>
+                                </label>
+
+                                {/* Polígono 2 - Sectores */}
+                                <label className="group flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={activePolygons.has('sectores')}
+                                        onChange={() => {
+                                            const newSet = new Set(activePolygons);
+                                            if (newSet.has('sectores')) {
+                                                newSet.delete('sectores');
+                                            } else {
+                                                newSet.add('sectores');
+                                            }
+                                            setActivePolygons(newSet);
+                                            console.log('🗺️ Toggle polígono (mockup):', 'sectores');
+                                        }}
+                                        className="w-4 h-4 flex-shrink-0 mt-0.5"
+                                    />
+                                    <span className="text-sm font-medium break-words">
+                                        Sectores
+                                    </span>
+                                </label>
+
+                                {/* Polígono 3 - Villas/Poblaciones */}
+                                <label className="group flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={activePolygons.has('villas-poblaciones')}
+                                        onChange={() => {
+                                            const newSet = new Set(activePolygons);
+                                            if (newSet.has('villas-poblaciones')) {
+                                                newSet.delete('villas-poblaciones');
+                                            } else {
+                                                newSet.add('villas-poblaciones');
+                                            }
+                                            setActivePolygons(newSet);
+                                            console.log('🗺️ Toggle polígono (mockup):', 'villas-poblaciones');
+                                        }}
+                                        className="w-4 h-4 flex-shrink-0 mt-0.5"
+                                    />
+                                    <span className="text-sm font-medium break-words">
+                                        Villas/Poblaciones
+                                    </span>
+                                </label>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

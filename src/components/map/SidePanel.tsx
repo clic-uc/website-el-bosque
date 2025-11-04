@@ -16,6 +16,16 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
     const [attributes, setAttributes] = useState<Record<string, string | number | boolean>>(shape?.attributes || {});
     const updateRecordMutation = useUpdateRecord();
 
+    // Validar formato Rol SII (XXXXX-XXXXX)
+    const isValidRolFormat = (rol: string): boolean => {
+        if (!rol) return true; // Vacío es válido
+        const regex = /^\d{5}-\d{5}$/;
+        return regex.test(rol);
+    };
+
+    const rolSiiValue = (attributes["Rol SII"] as string) || "";
+    const rolSiiIsInvalid = rolSiiValue && !isValidRolFormat(rolSiiValue);
+
     useEffect(() => {
         setAttributes(shape?.attributes || {});
     }, [shape]);
@@ -85,6 +95,30 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
 
             {/* Scrollable attributes section */}
             <div className={"flex-1 flex flex-col gap-4 overflow-auto mb-4"}>
+                {/* Sección de Rol SII - NUEVO */}
+                {shape && (
+                    <div className="flex-none bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <p className="text-sm font-semibold text-blue-900 mb-2">Rol SII</p>
+                        <input
+                            type="text"
+                            value={(attributes["Rol SII"] as string) || ""}
+                            onChange={(e) => setAttributes(prev => ({...prev, "Rol SII": e.target.value}))}
+                            className={`w-full p-2 border rounded-md font-mono text-sm focus:outline-none focus:ring-2 ${
+                                rolSiiIsInvalid 
+                                    ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+                                    : 'border-blue-300 focus:ring-blue-500'
+                            }`}
+                            placeholder="00000-00000"
+                        />
+                        {rolSiiIsInvalid && (
+                            <p className="text-xs text-red-600 mt-1 italic">
+                                ⚠️ Formato inválido: debe ser XXXXX-XXXXX (5 dígitos - 5 dígitos)
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Atributos del mapa */}
                 {
                     mapAttributes.map((attribute) => {
                         const value = attributes[attribute.id];
@@ -157,6 +191,53 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                         )
                     })
                 }
+
+                {/* Campos adicionales - NUEVO */}
+                {shape && (
+                    <>
+                        {/* Subdivisión / Fusión */}
+                        <div className="flex-none bg-amber-50 p-3 rounded-lg border border-amber-200 mt-2">
+                            <p className="text-sm font-semibold text-amber-900 mb-2">Subdivisión / Fusión</p>
+                            <select
+                                className="w-full p-2 border border-amber-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 mb-2"
+                                defaultValue=""
+                            >
+                                <option value="">Sin operación</option>
+                                <option value="subdivision">Subdivisión</option>
+                                <option value="fusion">Fusión</option>
+                            </select>
+                            <textarea
+                                placeholder="Detalles de la operación..."
+                                className="w-full p-2 border border-amber-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                                rows={2}
+                            />
+                        </div>
+
+                        {/* Comentarios */}
+                        <div className="flex-none bg-purple-50 p-3 rounded-lg border border-purple-200">
+                            <p className="text-sm font-semibold text-purple-900 mb-2">Comentarios</p>
+                            <textarea
+                                placeholder="Agregar comentarios sobre este registro..."
+                                className="w-full p-2 border border-purple-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                                rows={3}
+                            />
+                        </div>
+
+                        {/* Otros mapas con este rol */}
+                        <div className="flex-none bg-green-50 p-3 rounded-lg border border-green-200">
+                            <p className="text-sm font-semibold text-green-900 mb-2">Presente en otros mapas</p>
+                            <div className="space-y-1">
+                                {/* MOCKUP: Lista de mapas */}
+                                <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                                    Obras Menores
+                                </div>
+                                <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                                    Recepción Final
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Action buttons */}
