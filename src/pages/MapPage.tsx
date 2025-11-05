@@ -1,4 +1,5 @@
 import "leaflet/dist/leaflet.css";
+import { SignOutButton, UserButton } from "@clerk/clerk-react";
 import MapDisplay from "../components/map/MapDisplay.tsx";
 import RecordsTable from "../components/table/RecordsTable.tsx";
 import { AnyShape } from "../types/Shape.tsx";
@@ -270,114 +271,130 @@ const MapPage = () => {
   }
 
   return (
-    <div className="flex w-screen h-screen overflow-hidden">
-      {/* Modal de anuncios de features */}
-      <FeaturesAnnouncementModal
-        isOpen={isAnnouncementModalOpen}
-        onClose={() => setIsAnnouncementModalOpen(false)}
-      />
-      <AddMapModal 
-        isOpen={isAddMapModalOpen}
-        onClose={handleCloseAddMapModal}
-        maps={mapsForDisplay}
-      />
-      <EditMapModal
-        isOpen={isEditMapModalOpen}
-        onClose={handleCloseEditMapModal}
-        mapId={editingMap ? editingMap.id : null}
-      />
-      
-      <SideBar
-        maps={mapsForDisplay}
-        activeMaps={activeMaps}
-        onToggleMap={handleToggleMap}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        onAddMapClick={handleOpenAddMapModal}
-        onEditMapClick={handleOpenEditMapModal}
-      />
-      
-      {/* Botón para expandir sidebar cuando está colapsado */}
-      {isSidebarCollapsed && (
-        <button
-          onClick={() => setIsSidebarCollapsed(false)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-[1000] bg-white shadow-lg border border-gray-200 rounded-r-lg p-2 hover:bg-gray-50 transition-colors"
-          title="Expandir barra lateral"
-        >
-          <svg 
-            className="w-5 h-5 text-gray-600" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M13 5l7 7-7 7M5 5l7 7-7 7" 
-            />
-          </svg>
-        </button>
-      )}
-      
-      <div className="flex-1 relative flex flex-col min-w-0 overflow-hidden">
-        {/* Barra de búsqueda y botones superiores */}
-        <div className="flex-shrink-0 bg-white border-b shadow-sm p-3 z-[1500] flex items-center gap-3">
-          <SearchBar
-            shapes={allShapes}
-            onResultSelect={handleSearchResultSelect}
-          />
-          
-          {/* Botones de acciones */}
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => alert('Funcionalidad de Subdividir en desarrollo')}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
-            >
-              Subdividir
-            </button>
-            <button
-              onClick={() => alert('Funcionalidad de Fusionar en desarrollo')}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
-            >
-              Fusionar
-            </button>
-            <button
-              onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
-              className={`px-4 py-2 font-medium rounded-lg transition-colors ${
-                viewMode === 'table'
-                  ? 'bg-gray-600 hover:bg-gray-700 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {viewMode === 'map' ? 'Ver en tabla' : 'Ver en mapa'}
-            </button>
+    <div className="flex flex-col w-screen h-screen overflow-hidden">
+      <header className="flex-shrink-0 bg-white border-b shadow-sm">
+        <div className="flex items-center justify-between px-6 py-3">
+          <h1 className="text-lg font-semibold text-gray-800">Panel de mapas</h1>
+          <div className="flex items-center gap-3">
+            <SignOutButton>
+              <button className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                Cerrar sesión
+              </button>
+            </SignOutButton>
+            <UserButton />
           </div>
         </div>
+      </header>
+
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Modal de anuncios de features */}
+        <FeaturesAnnouncementModal
+          isOpen={isAnnouncementModalOpen}
+          onClose={() => setIsAnnouncementModalOpen(false)}
+        />
+        <AddMapModal 
+          isOpen={isAddMapModalOpen}
+          onClose={handleCloseAddMapModal}
+          maps={mapsForDisplay}
+        />
+        <EditMapModal
+          isOpen={isEditMapModalOpen}
+          onClose={handleCloseEditMapModal}
+          mapId={editingMap ? editingMap.id : null}
+        />
         
-        {/* Vista: Mapa o Tabla */}
-        <div className="flex-1 relative overflow-hidden">
-          {viewMode === 'map' ? (
-            <MapDisplay
-              maps={mapsForDisplay}
-              activeMap={activeMap}
-              activeMaps={activeMaps}
-              className="w-full h-full"
-              onCreateShape={handleCreateShape}
-              onUpdateShape={handleUpdateShape}
-              onDeleteShape={handleDeleteShape}
-              selectedShapeFromSearch={selectedShapeFromSearch}
-              onSearchShapeCleared={() => setSelectedShapeFromSearch(null)}
+        <SideBar
+          maps={mapsForDisplay}
+          activeMaps={activeMaps}
+          onToggleMap={handleToggleMap}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onAddMapClick={handleOpenAddMapModal}
+          onEditMapClick={handleOpenEditMapModal}
+        />
+        
+        {/* Botón para expandir sidebar cuando está colapsado */}
+        {isSidebarCollapsed && (
+          <button
+            onClick={() => setIsSidebarCollapsed(false)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-[1000] bg-white shadow-lg border border-gray-200 rounded-r-lg p-2 transition-colors hover:bg-gray-50"
+            title="Expandir barra lateral"
+          >
+            <svg 
+              className="h-5 w-5 text-gray-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M13 5l7 7-7 7M5 5l7 7-7 7" 
+              />
+            </svg>
+          </button>
+        )}
+        
+        <div className="relative flex flex-1 flex-col min-w-0 overflow-hidden">
+          {/* Barra de búsqueda y botones superiores */}
+          <div className="z-[1500] flex items-center gap-3 border-b bg-white p-3 shadow-sm">
+            <SearchBar
+              shapes={allShapes}
+              onResultSelect={handleSearchResultSelect}
             />
-          ) : (
-            <RecordsTable
-              records={Array.isArray(recordsData) 
-                ? recordsData 
-                : (recordsData as unknown as { data?: GeographicalRecord[] })?.data ?? []}
-              isLoading={recordsLoading}
-              mapId={firstActiveMapId}
-            />
-          )}
+            
+            {/* Botones de acciones */}
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => alert('Funcionalidad de Subdividir en desarrollo')}
+                className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
+              >
+                Subdividir
+              </button>
+              <button
+                onClick={() => alert('Funcionalidad de Fusionar en desarrollo')}
+                className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
+              >
+                Fusionar
+              </button>
+              <button
+                onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
+                className={`rounded-lg px-4 py-2 font-medium text-white transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-gray-600 hover:bg-gray-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {viewMode === 'map' ? 'Ver en tabla' : 'Ver en mapa'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Vista: Mapa o Tabla */}
+          <div className="relative flex-1 overflow-hidden">
+            {viewMode === 'map' ? (
+              <MapDisplay
+                maps={mapsForDisplay}
+                activeMap={activeMap}
+                activeMaps={activeMaps}
+                className="h-full w-full"
+                onCreateShape={handleCreateShape}
+                onUpdateShape={handleUpdateShape}
+                onDeleteShape={handleDeleteShape}
+                selectedShapeFromSearch={selectedShapeFromSearch}
+                onSearchShapeCleared={() => setSelectedShapeFromSearch(null)}
+              />
+            ) : (
+              <RecordsTable
+                records={Array.isArray(recordsData) 
+                  ? recordsData 
+                  : (recordsData as unknown as { data?: GeographicalRecord[] })?.data ?? []}
+                isLoading={recordsLoading}
+                mapId={firstActiveMapId}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
