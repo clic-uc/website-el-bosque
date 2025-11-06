@@ -10,17 +10,20 @@ interface SidePanelProps {
     cancel: (() => void) | null;
     save: ((updatedAttributes: Record<string, string | number | boolean>) => void) | null;
     mapId?: number; // Necesario para identificar qué RecordAttribute actualizar
+    readOnly?: boolean;
 }
 
-const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save, mapId}) => {
+const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save, mapId, readOnly = false}) => {
     const [attributes, setAttributes] = useState<Record<string, string | number | boolean>>(shape?.attributes || {});
     const updateRecordMutation = useUpdateRecord();
+    const isReadOnly = readOnly || !save;
 
     useEffect(() => {
         setAttributes(shape?.attributes || {});
     }, [shape]);
 
     const handleSave = async () => {
+        if (isReadOnly) return;
         if (!shape || !mapId) return;
 
         // Extraer el recordId de los atributos del shape
@@ -105,6 +108,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                                         onChange={(e) => setAttributes(prev => ({...prev, [attribute.id]: e.target.value}))}
                                         className={"p-1 border border-gray-300 rounded-md"}
                                         placeholder={!hasValue ? "Sin valor" : ""}
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             ) : attribute.type === "number" ? (
@@ -121,6 +125,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                                         onChange={(e) => setAttributes(prev => ({...prev, [attribute.id]: parseFloat(e.target.value)}))}
                                         className={"p-1 border border-gray-300 rounded-md"}
                                         placeholder={!hasValue ? "Sin valor" : ""}
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             ) : attribute.type === "boolean" ? (
@@ -132,6 +137,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                                             checked={value as boolean || false}
                                             onChange={(e) => setAttributes(prev => ({...prev, [attribute.id]: e.target.checked}))}
                                             className={"h-4 w-4"}
+                                            disabled={isReadOnly}
                                         />
                                     </div>
                                     <p className="text-xs text-gray-500 italic">
@@ -151,6 +157,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                                         value={value as string || ""}
                                         onChange={(e) => setAttributes(prev => ({...prev, [attribute.id]: e.target.value}))}
                                         className={"p-1 border border-gray-300 rounded-md"}
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             ) : null
@@ -165,14 +172,18 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                     className={"flex-auto bg-gray-200 hover:bg-gray-300 transition-colors p-2 rounded-md cursor-pointer font-medium"}
                     onClick={cancel || undefined}
                     disabled={updateRecordMutation.isPending}
-                >Cancelar</button>
-                <button
-                    className={"flex-auto bg-primary hover:bg-primary-light transition-colors text-white p-2 rounded-md cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed"}
-                    onClick={handleSave}
-                    disabled={updateRecordMutation.isPending}
-                >
-                    {updateRecordMutation.isPending ? 'Guardando...' : 'Guardar'}
-                </button>
+                >{isReadOnly ? 'Cerrar' : 'Cancelar'}</button>
+                {
+                    !isReadOnly && (
+                        <button
+                            className={"flex-auto bg-primary hover:bg-primary-light transition-colors text-white p-2 rounded-md cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed"}
+                            onClick={handleSave}
+                            disabled={updateRecordMutation.isPending}
+                        >
+                            {updateRecordMutation.isPending ? 'Guardando...' : 'Guardar'}
+                        </button>
+                    )
+                }
             </div>
         </div>
     )

@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import MapPage from './pages/MapPage.tsx';
 import AuthPage from './pages/AuthPage.tsx';
 import ApiAuthInterceptor from './components/ApiAuthInterceptor';
+import AdminDashboard from './pages/AdminDashboard.tsx';
 
 function App() {
 
@@ -25,6 +26,7 @@ function App() {
             </>
           }
         />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

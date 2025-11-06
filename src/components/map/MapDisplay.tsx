@@ -22,6 +22,9 @@ interface MapDisplayProps {
     className?: string;
     selectedShapeFromSearch?: AnyShape | null;
     onSearchShapeCleared?: () => void;
+    canManageShapes?: boolean;
+    canEditAttributes?: boolean;
+    canImport?: boolean;
 }
 
 const parsePolyLatLngs = (latLngs: LatLng[][]) => {
@@ -65,13 +68,32 @@ const MapZoomHandler: React.FC<{
 };
 
 const MapDisplay: React.FC<MapDisplayProps> = (
-    {maps, activeMap, activeMaps, onCreateShape, onUpdateShape, onDeleteShape, className, selectedShapeFromSearch, onSearchShapeCleared},
+    {
+        maps,
+        activeMap,
+        activeMaps,
+        onCreateShape,
+        onUpdateShape,
+        onDeleteShape,
+        className,
+        selectedShapeFromSearch,
+        onSearchShapeCleared,
+        canManageShapes = true,
+        canEditAttributes = true,
+        canImport = true,
+    },
 ) => {
 
     const config = useConfig();
 
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    
+    useEffect(() => {
+        if (!canImport && isImportModalOpen) {
+            setIsImportModalOpen(false);
+        }
+    }, [canImport, isImportModalOpen]);
     
     // Debug: log when selectedShape changes
     useEffect(() => {
@@ -164,23 +186,31 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         setSelectedShape(null);
     }, []);
 
-    const eventHandlers: (shape: AnyShape) => LeafletEventHandlerFnMap = (shape) => ({
-        click: () => {
-            setSelectedShape(shape);
-        },
-        remove: () => {
-            onDeleteShape(
-                shape.id,
-                () => {
-                    setSelectedShape(null);
-                    delete layerRefs.current[shape.id];
-                },
-                error => console.error('Error deleting shape:', error)
-            );
-        },
-    })
+    const eventHandlers: (shape: AnyShape) => LeafletEventHandlerFnMap = (shape) => {
+        const handlers: LeafletEventHandlerFnMap = {
+            click: () => {
+                setSelectedShape(shape);
+            },
+        };
+
+        if (canManageShapes) {
+            handlers.remove = () => {
+                onDeleteShape(
+                    shape.id,
+                    () => {
+                        setSelectedShape(null);
+                        delete layerRefs.current[shape.id];
+                    },
+                    error => console.error('Error deleting shape:', error)
+                );
+            };
+        }
+
+        return handlers;
+    }
     
     const onInputCreate = useCallback((shape: AnyShape) => {
+        if (!canManageShapes) return;
         onCreateShape(
             shape,
             (newShape) => {
@@ -188,12 +218,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             },
             (error) => console.error('Error creating shape from input:', error)
         );
-    }, [onCreateShape]);
+    }, [canManageShapes, onCreateShape]);
 
     // `v` is the event object from react-leaflet-draw. Use `any` here to avoid
     // deep typings; keep implementation unchanged.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onDrawCreate = useCallback((v: any) => {
+        if (!canManageShapes) return;
         const supportedTypes = ["polyline", "polygon", "marker"];
 
         if (!supportedTypes.includes(v.layerType)) {
@@ -249,11 +280,12 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             (error) => console.error('Error creating shape from draw:', error)
         );
         
-    }, [onCreateShape]);
+    }, [canManageShapes, onCreateShape]);
 
     // `v` is the edit event from react-leaflet-draw
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onEditMove = useCallback((v: any) => {
+        if (!canManageShapes) return;
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.layer);
         if (!shapeId) return;
         const shape = activeMap.shapes.find(s => s.id === shapeId);
@@ -281,11 +313,12 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             (error) => console.error('Error editing shape (move):', error)
         );
         
-    }, [activeMap.shapes, onUpdateShape, selectedShape]);
+    }, [activeMap.shapes, canManageShapes, onUpdateShape, selectedShape]);
     
     // `v` is the vertex edit event from react-leaflet-draw
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onEditVertex = useCallback((v: any) => {
+        if (!canManageShapes) return;
         const shapeId = Object.keys(layerRefs.current).find(id => layerRefs.current[id] === v.poly);
         if (!shapeId) return;
         const shape = activeMap.shapes.find(s => s.id === shapeId);
@@ -318,7 +351,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             },
             (error) => console.error('Error editing shape (vertex):', error)
         );
-    }, [activeMap.shapes, onUpdateShape, selectedShape]);
+    }, [activeMap.shapes, canManageShapes, onUpdateShape, selectedShape]);
 
     const markerDrawOptions = {
         ...disabledDrawOptions,
@@ -368,7 +401,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                             }}}
                         >
                             {
-                                map === activeMap && map.drawable && (
+                                map === activeMap && map.drawable && canManageShapes && (
                                     <>
                                         <EditControl
                                             onCreated={onDrawCreate}
@@ -457,42 +490,45 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 mapAttributes={activeMap.attributes}
                 open={selectedShape !== null}
                 cancel={cancel}
-                save={save}
+                save={canEditAttributes ? save : null}
                 mapId={activeMap.id}
+                readOnly={!canEditAttributes}
             />
-            {
-                activeMap.drawable && !selectedShape && (
-                    <ShapeInput
-                        type={activeMap.shapeType}
-                        onCreate={onInputCreate}
-                        inputGroupRef={inputGroupRef}
-                    />
-                )
-            }
+            {activeMap.drawable && !selectedShape && canManageShapes && (
+                <ShapeInput
+                    type={activeMap.shapeType}
+                    onCreate={onInputCreate}
+                    inputGroupRef={inputGroupRef}
+                />
+            )}
             
             {/* Botón flotante para importar records */}
-            <button
-                onClick={() => setIsImportModalOpen(true)}
-                className="absolute bottom-6 left-6 z-[1000] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg shadow-lg transition-colors flex items-center space-x-2"
-                title="Importar records desde CSV"
-            >
-                <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5" 
-                    viewBox="0 0 20 20" 
-                    fill="currentColor"
+            {canImport && (
+                <button
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="absolute bottom-6 left-6 z-[1000] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg shadow-lg transition-colors flex items-center space-x-2"
+                    title="Importar records desde CSV"
                 >
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-                <span>Importar CSV</span>
-            </button>
+                    <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5" 
+                        viewBox="0 0 20 20" 
+                        fill="currentColor"
+                    >
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Importar CSV</span>
+                </button>
+            )}
 
             {/* Modal de importación */}
-            <ImportRecordsModal
-                maps={maps}
-                isOpen={isImportModalOpen}
-                onClose={() => setIsImportModalOpen(false)}
-            />
+            {canImport && (
+                <ImportRecordsModal
+                    maps={maps}
+                    isOpen={isImportModalOpen}
+                    onClose={() => setIsImportModalOpen(false)}
+                />
+            )}
         </div>
     )
 }
