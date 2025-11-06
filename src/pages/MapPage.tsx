@@ -1,4 +1,5 @@
 import "leaflet/dist/leaflet.css";
+import { Link } from "react-router-dom";
 import { SignOutButton, UserButton } from "@clerk/clerk-react";
 import MapDisplay from "../components/map/MapDisplay.tsx";
 import RecordsTable from "../components/table/RecordsTable.tsx";
@@ -6,7 +7,7 @@ import { AnyShape } from "../types/Shape.tsx";
 import SideBar from "../components/map/SideBar.tsx";
 import SearchBar from "../components/map/SearchBar.tsx";
 import FeaturesAnnouncementModal from "../components/common/FeaturesAnnouncementModal.tsx";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMaps } from "../hooks/useMaps";
 import { useRecords } from "../hooks/useRecords";
 import { transformBackendMapToFrontend } from "../utils/mapTransformers";
@@ -14,10 +15,22 @@ import type { GeographicalRecord } from "../types/api.types";
 import AddMapModal from "../components/map/AddMapModal.tsx";
 import EditMapModal from "../components/map/EditMapModal.tsx";
 import type { Map } from "../types/Map.tsx";
+import { getRoleLabel, isAdmin, isEditor, isReader, useCurrentRole } from "../auth/role";
 
 const MapPage = () => {
   // Fetch maps from backend
   const { data: backendMaps, isLoading: mapsLoading, error: mapsError } = useMaps();
+  const role = useCurrentRole();
+  const isAdminRole = isAdmin(role);
+  const isEditorRole = isEditor(role);
+  const isReaderRole = isReader(role);
+  const canManageMaps = isAdminRole || isEditorRole;
+  const roleLabel = getRoleLabel(role);
+  const roleBadgeClass = isAdminRole
+    ? "border-blue-200 bg-blue-50 text-blue-700"
+    : isEditorRole
+    ? "border-amber-200 bg-amber-50 text-amber-700"
+    : "border-slate-200 bg-slate-50 text-slate-600";
 
   const maps = useMemo(() => {
     if (!backendMaps) return [];
@@ -48,6 +61,14 @@ const MapPage = () => {
   // State: Modal de editar mapa
   const [isEditMapModalOpen, setEditMapModalOpen] = useState(false);
   const [editingMap, setEditingMap] = useState<Map | null>(null);
+
+  useEffect(() => {
+    if (!canManageMaps) {
+      setAddMapModalOpen(false);
+      setEditMapModalOpen(false);
+      setEditingMap(null);
+    }
+  }, [canManageMaps]);
 
   // Fetch records SOLO para los mapas activos con coordenadas válidas
   const firstActiveMapId = activeMaps[0];
@@ -276,6 +297,17 @@ const MapPage = () => {
         <div className="flex items-center justify-between px-6 py-3">
           <h1 className="text-lg font-semibold text-gray-800">Panel de mapas</h1>
           <div className="flex items-center gap-3">
+            <span className={`hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${roleBadgeClass}`}>
+              {roleLabel}
+            </span>
+            {isAdminRole && (
+              <Link
+                to="/admin"
+                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              >
+                Panel de administración
+              </Link>
+            )}
             <SignOutButton>
               <button className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 Cerrar sesión
@@ -292,16 +324,20 @@ const MapPage = () => {
           isOpen={isAnnouncementModalOpen}
           onClose={() => setIsAnnouncementModalOpen(false)}
         />
-        <AddMapModal 
-          isOpen={isAddMapModalOpen}
-          onClose={handleCloseAddMapModal}
-          maps={mapsForDisplay}
-        />
-        <EditMapModal
-          isOpen={isEditMapModalOpen}
-          onClose={handleCloseEditMapModal}
-          mapId={editingMap ? editingMap.id : null}
-        />
+        {canManageMaps && (
+          <AddMapModal 
+            isOpen={isAddMapModalOpen}
+            onClose={handleCloseAddMapModal}
+            maps={mapsForDisplay}
+          />
+        )}
+        {canManageMaps && (
+          <EditMapModal
+            isOpen={isEditMapModalOpen}
+            onClose={handleCloseEditMapModal}
+            mapId={editingMap ? editingMap.id : null}
+          />
+        )}
         
         <SideBar
           maps={mapsForDisplay}
@@ -309,8 +345,8 @@ const MapPage = () => {
           onToggleMap={handleToggleMap}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          onAddMapClick={handleOpenAddMapModal}
-          onEditMapClick={handleOpenEditMapModal}
+          onAddMapClick={canManageMaps ? handleOpenAddMapModal : undefined}
+          onEditMapClick={canManageMaps ? handleOpenEditMapModal : undefined}
         />
         
         {/* Botón para expandir sidebar cuando está colapsado */}
@@ -346,18 +382,22 @@ const MapPage = () => {
             
             {/* Botones de acciones */}
             <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => alert('Funcionalidad de Subdividir en desarrollo')}
-                className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
-              >
-                Subdividir
-              </button>
-              <button
-                onClick={() => alert('Funcionalidad de Fusionar en desarrollo')}
-                className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
-              >
-                Fusionar
-              </button>
+              {canManageMaps && (
+                <>
+                  <button
+                    onClick={() => alert('Funcionalidad de Subdividir en desarrollo')}
+                    className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                  >
+                    Subdividir
+                  </button>
+                  <button
+                    onClick={() => alert('Funcionalidad de Fusionar en desarrollo')}
+                    className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                  >
+                    Fusionar
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
                 className={`rounded-lg px-4 py-2 font-medium text-white transition-colors ${
@@ -384,6 +424,9 @@ const MapPage = () => {
                 onDeleteShape={handleDeleteShape}
                 selectedShapeFromSearch={selectedShapeFromSearch}
                 onSearchShapeCleared={() => setSelectedShapeFromSearch(null)}
+                canManageShapes={canManageMaps}
+                canEditAttributes={canManageMaps}
+                canImport={canManageMaps}
               />
             ) : (
               <RecordsTable

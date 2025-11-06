@@ -52,15 +52,17 @@ const SideBar: React.FC<SideBarProps> = ({
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-lg font-bold">Departamentos y Mapas</h2>
                             <div className="flex items-center">
-                                <button
-                                    onClick={onAddMapClick}
-                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                    title="Añadir mapa"
-                                >
-                                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
-                                    </svg>
-                                </button>
+                                {onAddMapClick && (
+                                    <button
+                                        onClick={onAddMapClick}
+                                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                        title="Añadir mapa"
+                                    >
+                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
+                                        </svg>
+                                    </button>
+                                )}
                                 {onToggleCollapse && (
                                     <button
                                         onClick={onToggleCollapse}
@@ -120,17 +122,19 @@ const SideBar: React.FC<SideBarProps> = ({
                                                     <span className="text-sm font-medium break-words">
                                                         {map.name}
                                                     </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => { e.stopPropagation(); onEditMapClick?.(map); }}
-                                                        className="ml-auto p-1 rounded hover:bg-gray-100 text-gray-600 transition-all duration-150 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
-                                                        title="Más opciones"
-                                                        aria-label={`Más opciones para ${map.name}`}
-                                                    >
-                                                        <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                            <path d="M6 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM12 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM18 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
-                                                        </svg>
-                                                    </button>
+                                                    {onEditMapClick && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); onEditMapClick(map); }}
+                                                            className="ml-auto p-1 rounded hover:bg-gray-100 text-gray-600 transition-all duration-150 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                                                            title="Más opciones"
+                                                            aria-label={`Más opciones para ${map.name}`}
+                                                        >
+                                                            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                <path d="M6 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM12 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM18 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                     
                                                 </label>
                                             ))}
