@@ -32,6 +32,7 @@ const withDefaults = (init: RequestInit = {}): RequestInit => {
 };
 
 export async function apiGet<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { body: _body, ...rest } = opts ?? {};
   const response = await fetch(buildUrl(path), withDefaults({ ...rest, method: 'GET' }));
   return handleResponse<T>(response);

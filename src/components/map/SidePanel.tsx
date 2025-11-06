@@ -35,6 +35,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
         }
 
         // Separar atributos que son metadatos vs datos reales del record
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { recordId: _, recordAttributeId: __, "Rol SII": ___, ...recordAttributesData } = attributes;
 
         try {
@@ -67,6 +68,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
             if (cancel) {
                 cancel();
             }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             // Extraer mensaje más útil del error del servidor si está disponible
             console.error('Error actualizando registro:', error);
