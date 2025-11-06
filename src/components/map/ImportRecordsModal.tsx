@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 import { useImportRecords } from '../../hooks/useRecords';
 import type { Map } from '../../types/Map';
 import {ImSpinner8} from "react-icons/im";
-import {HiDotsVertical} from "react-icons/hi";
 import ColumnSelectMenu from "./ColumnSelectMenu.tsx";
 
 interface ImportRecordsModalProps {

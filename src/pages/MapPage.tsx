@@ -15,7 +15,7 @@ import type { GeographicalRecord } from "../types/api.types";
 import AddMapModal from "../components/map/AddMapModal.tsx";
 import EditMapModal from "../components/map/EditMapModal.tsx";
 import type { Map } from "../types/Map.tsx";
-import { getRoleLabel, isAdmin, isEditor, isReader, useCurrentRole } from "../auth/role";
+import { getRoleLabel, isAdmin, isEditor, useCurrentRole } from "../auth/role";
 
 const MapPage = () => {
   // Fetch maps from backend
@@ -23,7 +23,6 @@ const MapPage = () => {
   const role = useCurrentRole();
   const isAdminRole = isAdmin(role);
   const isEditorRole = isEditor(role);
-  const isReaderRole = isReader(role);
   const canManageMaps = isAdminRole || isEditorRole;
   const roleLabel = getRoleLabel(role);
   const roleBadgeClass = isAdminRole
