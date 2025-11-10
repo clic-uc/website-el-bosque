@@ -17,7 +17,7 @@ import EditMapModal from "../components/map/EditMapModal.tsx";
 import type { Map } from "../types/Map.tsx";
 import { getRoleLabel, isAdmin, isEditor, useCurrentRole } from "../auth/role";
 import FilterSideBar from "../components/map/FilterSideBar.tsx";
-import {MdFilter, MdFilterAlt} from "react-icons/md";
+import { LuFilter } from "react-icons/lu";
 
 const MapPage = () => {
   // Fetch maps from backend
@@ -387,7 +387,7 @@ const MapPage = () => {
               onClick={() => setIsFilterOpen(prev => !prev)}
               className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200 flex gap-2 items-center"
             >
-              <MdFilterAlt />
+              <LuFilter />
               Filtros
             </button>
             
