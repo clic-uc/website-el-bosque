@@ -138,6 +138,13 @@ export const recordsService = {
     );
     return data;
   },
+
+  getFiltersForMap: async (mapId: number): Promise<Record<string, string | string[]>> => {
+    const { data } = await apiClient.get<Record<string, string | string[]>>(
+      API_ENDPOINTS.filtersForMap(mapId)
+    );
+    return data;
+  }
 };
 
 /**

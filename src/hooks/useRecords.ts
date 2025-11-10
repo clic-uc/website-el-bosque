@@ -107,3 +107,14 @@ export const useImportRecords = () => {
     },
   });
 };
+
+export const useRecordsFilters = (mapId: number) => {
+  return useQuery({
+    queryKey: queryKeys.records.filters(mapId),
+    queryFn: () => {
+      console.log("Querying filters for mapId:", mapId);
+      return recordsService.getFiltersForMap(mapId)
+    },
+    enabled: !!mapId && mapId > 0,
+  });
+}

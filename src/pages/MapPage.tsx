@@ -16,6 +16,8 @@ import AddMapModal from "../components/map/AddMapModal.tsx";
 import EditMapModal from "../components/map/EditMapModal.tsx";
 import type { Map } from "../types/Map.tsx";
 import { getRoleLabel, isAdmin, isEditor, useCurrentRole } from "../auth/role";
+import FilterSideBar from "../components/map/FilterSideBar.tsx";
+import {MdFilter, MdFilterAlt} from "react-icons/md";
 
 const MapPage = () => {
   // Fetch maps from backend
@@ -61,6 +63,9 @@ const MapPage = () => {
   const [isEditMapModalOpen, setEditMapModalOpen] = useState(false);
   const [editingMap, setEditingMap] = useState<Map | null>(null);
 
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<Record<string, string | string[]>>({});
+
   useEffect(() => {
     if (!canManageMaps) {
       setAddMapModalOpen(false);
@@ -78,7 +83,7 @@ const MapPage = () => {
   // Para vista de tabla: todos los records
   const { data: recordsData, isLoading: recordsLoading } = useRecords(
     firstActiveMapId 
-      ? { mapId: firstActiveMapId, hasCoordinates: viewMode === 'map' ? true : undefined } 
+      ? { mapId: firstActiveMapId, hasCoordinates: viewMode === 'map' ? true : undefined, filters: JSON.stringify(filters) }
       : undefined
   );
 
@@ -378,6 +383,13 @@ const MapPage = () => {
               shapes={allShapes}
               onResultSelect={handleSearchResultSelect}
             />
+            <button
+              onClick={() => setIsFilterOpen(prev => !prev)}
+              className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200 flex gap-2 items-center"
+            >
+              <MdFilterAlt />
+              Filtros
+            </button>
             
             {/* Botones de acciones */}
             <div className="ml-auto flex items-center gap-2">
@@ -411,7 +423,7 @@ const MapPage = () => {
           </div>
           
           {/* Vista: Mapa o Tabla */}
-          <div className="relative flex-1 overflow-hidden">
+          <div className="relative flex-1 overflow-hidden flex">
             {viewMode === 'map' ? (
               <MapDisplay
                 maps={mapsForDisplay}
@@ -436,6 +448,7 @@ const MapPage = () => {
                 mapId={firstActiveMapId}
               />
             )}
+            <FilterSideBar isOpen={isFilterOpen} mapId={firstActiveMapId} updateFilters={(newFilters) => setFilters(newFilters)} />
           </div>
         </div>
       </div>

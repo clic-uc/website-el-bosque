@@ -30,7 +30,8 @@ export const API_ENDPOINTS = {
   records: '/records',
   recordById: (id: number) => `/records/${id}`,
   recordsImport: (mapId: number, delimiter: string) => `/records/import/map/${mapId}?delimiter=${encodeURIComponent(delimiter)}`,
-  
+  filtersForMap: (mapId: number) => `/records/filters/map/${mapId}`,
+
   // Seeds
   seedsRun: '/seeds/run',
   seedsSummary: '/seeds/summary',

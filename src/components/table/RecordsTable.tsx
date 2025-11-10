@@ -95,7 +95,7 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
 
   if (!records || records.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex w-full items-center justify-center h-full">
         <div className="text-center">
           <p className="text-lg text-gray-700">No hay registros disponibles</p>
           <p className="text-sm text-gray-500 mt-2">

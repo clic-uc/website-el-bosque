@@ -110,6 +110,7 @@ export interface RecordsQueryParams {
   hasCoordinates?: boolean; // Filtrar solo records con coordenadas válidas (lat y lon no nulos)
   page?: number; 
   limit?: number;
+  filters?: string
 }
 
 export interface PaginatedRecordsParams extends Omit<RecordsQueryParams, 'page' | 'limit'> {
