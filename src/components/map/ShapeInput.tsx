@@ -9,6 +9,9 @@ interface ShapeInputProps {
 }
 
 const ShapeInput: React.FC<ShapeInputProps> = (props) => {
+    const [open, setOpen] = useState<boolean>(false);
+    const [selectedIcon, setSelectedIcon] = useState<string>('default');
+    const [customIconUrl, setCustomIconUrl] = useState<string>('');
 
     useEffect(() => {
         return () => {
@@ -17,8 +20,6 @@ const ShapeInput: React.FC<ShapeInputProps> = (props) => {
             }
         }
     })
-
-    const [open, setOpen] = useState<boolean>(false);
 
     return (
         open ? <div
@@ -42,6 +43,53 @@ const ShapeInput: React.FC<ShapeInputProps> = (props) => {
                                 placeholder="Coordenadas (lat, lon)"
                                 className={"p-1 border border-gray-300 rounded-md w-[20rem]"}
                             />
+                            
+                            {/* Selector de icono - NUEVO */}
+                            <div className="border-t pt-2">
+                                <p className="text-xs font-semibold text-gray-700 mb-1">Icono del punto</p>
+                                <select
+                                    value={selectedIcon}
+                                    onChange={(e) => setSelectedIcon(e.target.value)}
+                                    className="w-full p-1 border border-gray-300 rounded-md text-sm"
+                                >
+                                    <option value="default">📍 Marcador por defecto</option>
+                                    <option value="house">🏠 Casa</option>
+                                    <option value="building">🏢 Edificio</option>
+                                    <option value="tree">🌳 Árbol</option>
+                                    <option value="park">🏞️ Parque</option>
+                                    <option value="custom">🖼️ Imagen personalizada</option>
+                                </select>
+                            </div>
+
+                            {/* Subir imagen personalizada - NUEVO */}
+                            {selectedIcon === 'custom' && (
+                                <div className="border border-gray-300 rounded-md p-2 bg-gray-50">
+                                    <p className="text-xs font-semibold text-gray-700 mb-2">Subir imagen</p>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/svg+xml"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const url = URL.createObjectURL(file);
+                                                setCustomIconUrl(url);
+                                                console.log('Imagen cargada (mockup):', url);
+                                            }
+                                        }}
+                                        className="text-xs w-full"
+                                    />
+                                    {customIconUrl && (
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <img 
+                                                src={customIconUrl} 
+                                                alt="Preview" 
+                                                className="w-8 h-8 object-contain border rounded"
+                                            />
+                                            <span className="text-xs text-green-600">✓ Imagen cargada</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </>
                 ) : props.type === "line" ? (
