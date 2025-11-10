@@ -11,6 +11,12 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estado para celdas en edición: { recordId: { columnName: value } }
+  const [editingCells, setEditingCells] = useState<Record<number, Record<string, string>>>({});
+  
+  // Estado para tracking qué filas están siendo editadas
+  const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
 
   // Filtrar records por búsqueda
   const filteredRecords = useMemo(() => {
@@ -81,6 +87,60 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
   const handleItemsPerPageChange = (value: number) => {
     setItemsPerPage(value);
     setCurrentPage(1); // Reset a primera página
+  };
+
+  // Funciones para manejo de edición
+  const startEditingCell = (recordId: number, columnName: string, currentValue: string) => {
+    setEditingCells(prev => ({
+      ...prev,
+      [recordId]: {
+        ...(prev[recordId] || {}),
+        [columnName]: currentValue
+      }
+    }));
+    setEditingRows(prev => new Set(prev).add(recordId));
+  };
+
+  const updateCellValue = (recordId: number, columnName: string, newValue: string) => {
+    setEditingCells(prev => ({
+      ...prev,
+      [recordId]: {
+        ...(prev[recordId] || {}),
+        [columnName]: newValue
+      }
+    }));
+  };
+
+  const saveRowChanges = (recordId: number) => {
+    // MOCKUP: solo loguear cambios
+    console.log('💾 Guardar cambios para record', recordId, editingCells[recordId]);
+    alert(`Cambios guardados (mockup):\n${JSON.stringify(editingCells[recordId], null, 2)}`);
+    
+    // Limpiar estado de edición
+    const newEditingCells = { ...editingCells };
+    delete newEditingCells[recordId];
+    setEditingCells(newEditingCells);
+    
+    const newEditingRows = new Set(editingRows);
+    newEditingRows.delete(recordId);
+    setEditingRows(newEditingRows);
+  };
+
+  const revertRowChanges = (recordId: number) => {
+    // Limpiar estado de edición
+    const newEditingCells = { ...editingCells };
+    delete newEditingCells[recordId];
+    setEditingCells(newEditingCells);
+    
+    const newEditingRows = new Set(editingRows);
+    newEditingRows.delete(recordId);
+    setEditingRows(newEditingRows);
+  };
+
+  const isRowEditing = (recordId: number) => editingRows.has(recordId);
+  
+  const getCellValue = (recordId: number, columnName: string, originalValue: string) => {
+    return editingCells[recordId]?.[columnName] ?? originalValue;
   };
 
   if (isLoading) {
@@ -171,36 +231,143 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
                   {col}
                 </th>
               ))}
+              {/* Columna de acciones */}
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap sticky right-0 bg-gray-100">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
             {currentRecords.map((record, index) => {
               const attributes = getRecordAttributes(record);
+              const editing = isRowEditing(record.id);
+              
               return (
                 <tr
                   key={record.id}
-                  className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}
+                  className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} ${editing ? 'bg-blue-50' : ''}`}
                 >
                   <td className="px-4 py-3 text-sm text-gray-900 border-b whitespace-nowrap">
                     {record.id}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 border-b font-mono whitespace-nowrap">
-                    {record.role?.roleId || '-'}
+                  
+                  {/* Rol SII - Editable */}
+                  <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={getCellValue(record.id, 'roleId', record.role?.roleId || '')}
+                        onChange={(e) => updateCellValue(record.id, 'roleId', e.target.value)}
+                        className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="00000-00000"
+                      />
+                    ) : (
+                      <span
+                        onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
+                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block"
+                      >
+                        {record.role?.roleId || '-'}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 border-b font-mono whitespace-nowrap">
-                    {record.lat ? record.lat.toFixed(6) : '-'}
+                  
+                  {/* Latitud - Editable */}
+                  <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={getCellValue(record.id, 'lat', record.lat?.toFixed(6) || '')}
+                        onChange={(e) => updateCellValue(record.id, 'lat', e.target.value)}
+                        className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="-33.456789"
+                      />
+                    ) : (
+                      <span
+                        onClick={() => startEditingCell(record.id, 'lat', record.lat?.toFixed(6) || '')}
+                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-600"
+                      >
+                        {record.lat ? record.lat.toFixed(6) : '-'}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 border-b font-mono whitespace-nowrap">
-                    {record.lon ? record.lon.toFixed(6) : '-'}
+                  
+                  {/* Longitud - Editable */}
+                  <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={getCellValue(record.id, 'lon', record.lon?.toFixed(6) || '')}
+                        onChange={(e) => updateCellValue(record.id, 'lon', e.target.value)}
+                        className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="-70.654321"
+                      />
+                    ) : (
+                      <span
+                        onClick={() => startEditingCell(record.id, 'lon', record.lon?.toFixed(6) || '')}
+                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-600"
+                      >
+                        {record.lon ? record.lon.toFixed(6) : '-'}
+                      </span>
+                    )}
                   </td>
-                  {columns.map(col => (
-                    <td
-                      key={col}
-                      className="px-4 py-3 text-sm text-gray-900 border-b whitespace-nowrap"
-                    >
-                      {attributes[col] !== undefined ? String(attributes[col]) : '-'}
-                    </td>
-                  ))}
+                  
+                  {/* Atributos dinámicos - Editables */}
+                  {columns.map(col => {
+                    const value = attributes[col] !== undefined ? String(attributes[col]) : '-';
+                    return (
+                      <td
+                        key={col}
+                        className="px-4 py-3 text-sm border-b whitespace-nowrap"
+                      >
+                        {editing ? (
+                          <input
+                            type="text"
+                            value={getCellValue(record.id, col, value)}
+                            onChange={(e) => updateCellValue(record.id, col, e.target.value)}
+                            className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        ) : (
+                          <span
+                            onClick={() => startEditingCell(record.id, col, value)}
+                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-900"
+                          >
+                            {value}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  
+                  {/* Columna de acciones - sticky right */}
+                  <td className="px-4 py-3 border-b whitespace-nowrap sticky right-0 bg-inherit">
+                    {editing ? (
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => saveRowChanges(record.id)}
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                          title="Guardar cambios"
+                        >
+                          ✓ Guardar
+                        </button>
+                        <button
+                          onClick={() => revertRowChanges(record.id)}
+                          className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
+                          title="Cancelar cambios"
+                        >
+                          ✕ Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
+                          className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium rounded transition-colors"
+                        >
+                          ✎ Editar
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               );
             })}
