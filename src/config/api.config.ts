@@ -29,7 +29,7 @@ export const API_ENDPOINTS = {
   // Records
   records: '/records',
   recordById: (id: number) => `/records/${id}`,
-  recordsImport: (mapId: number) => `/records/import/map/${mapId}`,
+  recordsImport: (mapId: number, delimiter: string) => `/records/import/map/${mapId}?delimiter=${encodeURIComponent(delimiter)}`,
   
   // Seeds
   seedsRun: '/seeds/run',
