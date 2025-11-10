@@ -30,6 +30,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [headerMappings, setHeaderMappings] = useState<Record<string, string | null>>({});
   const [parsedCsv, setParsedCsv] = useState<{ headers: string[]; rows: string[][]; total: number, rowsText: string } | null>(null);
+  const [delimiter, setDelimiter] = useState<string>(',');
 
   useEffect(() => {
       if (!selectedFile || !selectedMapId) return;
@@ -38,7 +39,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
       
       const loadCsv = async () => {
           setPreviewLoading(true);
-          const csv = await mapCsv(selectedFile);
+          const csv = await mapCsv(selectedFile, delimiter);
           setParsedCsv(csv);
 
           const newHeaderMappings: Record<string, string | null> = {};
@@ -52,7 +53,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
       }
 
       loadCsv();
-  }, [maps, selectedFile, selectedMapId]);
+  }, [maps, selectedFile, selectedMapId, delimiter]);
 
   const { mutate: importRecords, isPending, isError, error } = useImportRecords();
 
@@ -89,10 +90,11 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
     const headers = parsedCsv.headers.map(header => headerMappings[header] ? headerMappings[header] : header);
     csvContent.push(headers.join(';'));
     csvContent.push(parsedCsv.rowsText);
-    const mappedCsvFile = new File([csvContent.join('\n')], selectedFile.name, { type: 'text/csv' });
+    console.log(csvContent);
+    const mappedCsvFile = new File([csvContent.join('\r\n')], selectedFile.name, { type: 'text/csv' });
 
     importRecords(
-      { mapId: selectedMapId, file: mappedCsvFile },
+      { mapId: selectedMapId, file: mappedCsvFile, delimiter},
       {
         onSuccess: (data) => {
           alert(
@@ -176,6 +178,24 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
             )}
           </div>
 
+          {/* Selector de delimitador */}
+          <div>
+            <label htmlFor="delimiter-select" className="block text-sm font-medium text-gray-700 mb-2">
+              Seleccionar Delimitador
+            </label>
+            <select
+              id="delimiter-select"
+              value={delimiter}
+              onChange={(e) => setDelimiter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isPending}
+              required
+            >
+              <option value=",">, (Coma)</option>
+              <option value=";">; (Punto y coma)</option>
+            </select>
+          </div>
+
           {/* Mensajes de Error */}
           {(errorMessage || isError) && (
             <div className="bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded-md text-sm">
@@ -210,7 +230,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
                           key={`header-${header}-${i}`}
                           className={`p-2 col-start-[${i}] row-start-0 overflow-ellipsis overflow-hidden text-nowrap w-[10rem] max-w-[20rem] border-gray-200 border-b ${i < parsedCsv.headers.length - 1 ? "border-r" : ""} ${mapping ? "bg-green-100" : "bg-red-100"} flex w-full justify-between items-center`}
                         >
-                          {mapping || header}
+                          <p className={"text-wrap"}>{mapping || header}</p>
                           <ColumnSelectMenu
                             map={maps.find(m => m.id === selectedMapId)!}
                             usedAttrIds={headerMappings ? Object.values(headerMappings).filter(id => id !== null && id !== headerMappings[header]) as string[] : []}

@@ -41,12 +41,30 @@ const ColumnSelectMenu: React.FC<ColumnSelectMenuProps> = ({
             style={menuFloating.floatingStyles}
             {...floatingInteractions.getFloatingProps()}
           >
+            <p className={"text-gray-500 text-xs p-1 text-center"}>Por defecto</p>
+            {
+              ["roleId", "lat", "lon"].map(a => (
+                <div
+                  key={`a`}
+                  className={`p-1 ${usedAttrIds.includes(a) ? "cursor-not-allowed text-gray-500" : "hover:bg-gray-200 cursor-pointer"} ${selectedAttr === a ? "bg-green-200 font-bold" : ""} rounded-sm transition-colors`}
+                  onClick={() => {
+                    if (!usedAttrIds.includes(a)) {
+                      updateSelectedAttr(a === selectedAttr ? null : a);
+                      setMenuOpen(false);
+                    }
+                  }}
+                >
+                  {a === "roleId" ? "Rol" : a === "lat" ? "Latitud" : "Longitud"}
+                </div>
+              ))
+            }
+            <p className={"text-gray-500 text-xs p-1 text-center"}>Mapa</p>
             {
               map.attributes.map((attribute, i) => {
                 return (
                   <div
                     key={`${attribute.id}-${i}`}
-                    className={`p-1 ${usedAttrIds.includes(attribute.id) ? "cursor-not-allowed text-gray-500" : "hover:bg-gray-200 cursor-pointer"} ${selectedAttr === attribute.id ? "bg-green-200 font-bold" : ""} rounded-sm transition-colors`}
+                    className={`p-1 ${usedAttrIds.includes(attribute.id) ? "cursor-not-allowed text-gray-500" : "hover:bg-gray-200 cursor-pointer"} ${selectedAttr === attribute.id ? "bg-green-200 font-bold" : ""} text-wrap rounded-sm transition-colors`}
                     onClick={() => {
                       if (!usedAttrIds.includes(attribute.id)) {
                         updateSelectedAttr(attribute.id === selectedAttr ? null : attribute.id);

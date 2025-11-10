@@ -64,6 +64,7 @@ export const queryKeys = {
       [...queryKeys.records.lists(), 'paginated', params] as const,
     details: () => [...queryKeys.records.all, 'detail'] as const,
     detail: (id: number) => [...queryKeys.records.details(), id] as const,
+    filters: (mapId: number) => [...queryKeys.records.all, 'filters', mapId] as const,
   },
   
   // Seeds

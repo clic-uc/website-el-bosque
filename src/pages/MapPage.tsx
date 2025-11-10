@@ -16,6 +16,8 @@ import AddMapModal from "../components/map/AddMapModal.tsx";
 import EditMapModal from "../components/map/EditMapModal.tsx";
 import type { Map } from "../types/Map.tsx";
 import { getRoleLabel, isAdmin, isEditor, useCurrentRole } from "../auth/role";
+import FilterSideBar from "../components/map/FilterSideBar.tsx";
+import {MdFilter, MdFilterAlt} from "react-icons/md";
 
 const MapPage = () => {
   // Fetch maps from backend
@@ -61,6 +63,9 @@ const MapPage = () => {
   const [isEditMapModalOpen, setEditMapModalOpen] = useState(false);
   const [editingMap, setEditingMap] = useState<Map | null>(null);
 
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<Record<string, string | string[]>>({});
+
   useEffect(() => {
     if (!canManageMaps) {
       setAddMapModalOpen(false);
@@ -78,7 +83,7 @@ const MapPage = () => {
   // Para vista de tabla: todos los records
   const { data: recordsData, isLoading: recordsLoading } = useRecords(
     firstActiveMapId 
-      ? { mapId: firstActiveMapId, hasCoordinates: viewMode === 'map' ? true : undefined } 
+      ? { mapId: firstActiveMapId, hasCoordinates: viewMode === 'map' ? true : undefined, filters: JSON.stringify(filters) }
       : undefined
   );
 
@@ -374,23 +379,17 @@ const MapPage = () => {
         <div className="relative flex flex-1 flex-col min-w-0 overflow-hidden">
           {/* Barra de búsqueda y botones superiores */}
           <div className="z-[1500] flex items-center gap-3 border-b bg-white p-3 shadow-sm">
-            <div className="flex-1 flex items-center gap-2">
-              <SearchBar
-                shapes={allShapes}
-                onResultSelect={handleSearchResultSelect}
-              />
-              
-              <button
-                className="px-4 py-2 font-medium rounded-lg transition-colors bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-2 flex-shrink-0"
-                title="Abrir filtros"
-                onClick={() => console.log('🔍 Filtros (mockup)')}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                Filtros
-              </button>
-            </div>
+            <SearchBar
+              shapes={allShapes}
+              onResultSelect={handleSearchResultSelect}
+            />
+            <button
+              onClick={() => setIsFilterOpen(prev => !prev)}
+              className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200 flex gap-2 items-center"
+            >
+              <MdFilterAlt />
+              Filtros
+            </button>
             
             {/* Botones de acciones */}
             <div className="flex items-center gap-2">
@@ -424,7 +423,7 @@ const MapPage = () => {
           </div>
           
           {/* Vista: Mapa o Tabla */}
-          <div className="relative flex-1 overflow-hidden">
+          <div className="relative flex-1 overflow-hidden flex">
             {viewMode === 'map' ? (
               <MapDisplay
                 maps={mapsForDisplay}
@@ -449,6 +448,7 @@ const MapPage = () => {
                 mapId={firstActiveMapId}
               />
             )}
+            <FilterSideBar isOpen={isFilterOpen} mapId={firstActiveMapId} updateFilters={(newFilters) => setFilters(newFilters)} />
           </div>
         </div>
       </div>

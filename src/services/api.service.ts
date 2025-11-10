@@ -124,11 +124,11 @@ export const recordsService = {
     await apiClient.delete(API_ENDPOINTS.recordById(id));
   },
 
-  importForMap: async (mapId: number, file: File): Promise<BulkImportSummary> => {
+  importForMap: async (mapId: number, file: File, delimiter: string): Promise<BulkImportSummary> => {
     const formData = new FormData();
     formData.append('file', file);
     const { data } = await apiClient.post<BulkImportSummary>(
-      API_ENDPOINTS.recordsImport(mapId),
+      API_ENDPOINTS.recordsImport(mapId, delimiter),
       formData,
       {
         headers: {
@@ -138,6 +138,13 @@ export const recordsService = {
     );
     return data;
   },
+
+  getFiltersForMap: async (mapId: number): Promise<Record<string, string | string[]>> => {
+    const { data } = await apiClient.get<Record<string, string | string[]>>(
+      API_ENDPOINTS.filtersForMap(mapId)
+    );
+    return data;
+  }
 };
 
 /**
