@@ -129,6 +129,9 @@ const MapPage = () => {
             shapesByMap[ra.mapId] = [];
           }
           
+          // Filtrar comments y links de ra.attributes porque son campos del record, no atributos del mapa
+          const { comments: _, links: __, ...mapAttributes } = (ra.attributes || {}) as Record<string, any>;
+
           shapesByMap[ra.mapId].push({
             id: `record-${record.id}`,
             type: "point",
@@ -138,9 +141,9 @@ const MapPage = () => {
               recordId: record.id,
               recordAttributeId: ra.id,
               "Rol SII": record.role?.roleId || "",
-              comments: record.comments || "",
-              links: record.links || [],
-              ...(ra.attributes || {}),
+              ...mapAttributes,  // Atributos del mapa (sin comments ni links)
+              comments: record.comments || "",  // Comments del record
+              links: record.links || [],  // Links del record
             },
           });
         });

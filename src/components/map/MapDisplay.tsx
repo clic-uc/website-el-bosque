@@ -11,6 +11,9 @@ import {v4} from "uuid";
 import {LatLng, type LeafletEventHandlerFnMap} from "leaflet";
 import ImportRecordsModal from "./ImportRecordsModal.tsx";
 import PolygonLayers from "./PolygonLayers.tsx";
+import CoordinateUpdateModal from "./CoordinateUpdateModal.tsx";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "../../lib/api-client";
 
 interface MapDisplayProps {
     maps: Map[];
@@ -104,9 +107,22 @@ const MapDisplay: React.FC<MapDisplayProps> = (
 ) => {
 
     const config = useConfig();
+    const queryClient = useQueryClient();
 
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [coordinateModalState, setCoordinateModalState] = useState<{
+        isOpen: boolean;
+        recordId: number;
+        roleSII?: string;
+        oldCoordinates: { lat: number; lon: number };
+        newCoordinates: { lat: number; lon: number };
+        shapeId: string;
+    } | null>(null);
+    
+    // Caché para mantener el shape seleccionado incluso si desaparece temporalmente del array
+    // (por ejemplo, cuando está en un cluster durante zoom)
+    const selectedShapeCache = useRef<AnyShape | null>(null);
     
     useEffect(() => {
         if (!canImport && isImportModalOpen) {
@@ -114,9 +130,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         }
     }, [canImport, isImportModalOpen]);
     
-    // Debug: log when selectedShape changes
+    // Actualizar caché cuando selectedShape cambia
     useEffect(() => {
-        console.log('🔍 selectedShape changed:', selectedShape?.id || 'null');
+        if (selectedShape) {
+            selectedShapeCache.current = selectedShape;
+        } else {
+            selectedShapeCache.current = null;
+        }
     }, [selectedShape]);
     
     // Preserve selectedShape when maps update (shapes array recreated)
@@ -125,15 +145,13 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     useEffect(() => {
         if (selectedShape && activeMap) {
             const freshShape = activeMap.shapes.find(s => s.id === selectedShape.id);
+            
             // Only update if we found the shape AND it's a different instance
             if (freshShape && freshShape !== selectedShape) {
-                console.log('🔄 Updating selectedShape with fresh instance:', freshShape.id);
                 setSelectedShape(freshShape);
-            } else if (!freshShape) {
-                // Shape was removed from the map, deselect it
-                console.log('❌ Selected shape removed from map, deselecting');
-                setSelectedShape(null);
             }
+            // Si no se encuentra el shape, mantenerlo seleccionado
+            // (puede estar temporalmente oculto en un cluster durante zoom)
         }
     }, [activeMap, activeMap.shapes, selectedShape]);
     
@@ -205,6 +223,49 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         setSelectedShape(null);
     }, []);
 
+    // Función para confirmar el cambio de coordenadas
+    const handleCoordinateConfirm = async (updateRelatedRecords: boolean) => {
+        if (!coordinateModalState) return;
+
+        const { recordId, newCoordinates } = coordinateModalState;
+
+        try {
+            // Usar el nuevo endpoint que maneja tanto actualizaciones individuales como en bulk
+            const response = await apiClient.patch(`/records/coordinates/${recordId}`, {
+                lat: newCoordinates.lat,
+                lon: newCoordinates.lon,
+                updateRelatedRecords,
+            });
+
+            console.log(`✅ Updated ${response.data.updated} record(s)`);
+
+            // Invalidar query para recargar datos
+            queryClient.invalidateQueries({ queryKey: ["records"] });
+            
+            // Cerrar modal
+            setCoordinateModalState(null);
+        } catch (error) {
+            console.error("Error updating coordinates:", error);
+            alert("Error al actualizar coordenadas. Por favor intenta de nuevo.");
+        }
+    };
+
+    // Función para cancelar el cambio de coordenadas
+    const handleCoordinateCancel = () => {
+        if (!coordinateModalState) return;
+
+        const { shapeId, oldCoordinates } = coordinateModalState;
+        
+        // Revertir posición del marker a las coordenadas originales
+        const layer = layerRefs.current[shapeId];
+        if (layer && 'setLatLng' in layer) {
+            layer.setLatLng([oldCoordinates.lat, oldCoordinates.lon]);
+        }
+
+        // Cerrar modal
+        setCoordinateModalState(null);
+    };
+
     const eventHandlers: (shape: AnyShape) => LeafletEventHandlerFnMap = (shape) => {
         const handlers: LeafletEventHandlerFnMap = {
             click: () => {
@@ -212,16 +273,33 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             },
         };
 
-        if (canManageShapes) {
-            handlers.remove = () => {
-                onDeleteShape(
-                    shape.id,
-                    () => {
-                        setSelectedShape(null);
-                        delete layerRefs.current[shape.id];
+        // NO agregar handler.remove aquí
+        // El evento 'remove' de Leaflet se dispara cuando layers se ocultan por clustering o viewport,
+        // NO solo cuando se eliminan intencionalmente. Esto causaba que el selectedShape se deseleccionara al hacer zoom.
+        // Si se necesita eliminación de shapes, debe implementarse mediante UI explícita (botones).
+
+        // Handle drag end for markers
+        if (canEditAttributes && shape.type === 'point') {
+            handlers.dragend = (event) => {
+                const marker = event.target;
+                const newPosition = marker.getLatLng();
+                const recordId = shape.attributes.recordId as number;
+                const roleSII = shape.attributes["Rol SII"] as string | undefined;
+                
+                setCoordinateModalState({
+                    isOpen: true,
+                    recordId,
+                    roleSII,
+                    oldCoordinates: {
+                        lat: shape.coordinates[0],
+                        lon: shape.coordinates[1]
                     },
-                    error => console.error('Error deleting shape:', error)
-                );
+                    newCoordinates: {
+                        lat: newPosition.lat,
+                        lon: newPosition.lng
+                    },
+                    shapeId: shape.id
+                });
             };
         }
 
@@ -503,6 +581,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                                         }}
                                         key={shape.id}
                                         position={shape.coordinates}
+                                        draggable={canEditAttributes && map === activeMap}
                                         eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
                                     />
                                 ))}
@@ -546,6 +625,19 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                     maps={maps}
                     isOpen={isImportModalOpen}
                     onClose={() => setIsImportModalOpen(false)}
+                />
+            )}
+
+            {/* Modal de confirmación de cambio de coordenadas */}
+            {coordinateModalState && (
+                <CoordinateUpdateModal
+                    isOpen={coordinateModalState.isOpen}
+                    recordId={coordinateModalState.recordId}
+                    roleSII={coordinateModalState.roleSII}
+                    oldCoordinates={coordinateModalState.oldCoordinates}
+                    newCoordinates={coordinateModalState.newCoordinates}
+                    onConfirm={handleCoordinateConfirm}
+                    onCancel={handleCoordinateCancel}
                 />
             )}
         </div>
