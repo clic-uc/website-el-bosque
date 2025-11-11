@@ -8,13 +8,15 @@ interface SidePanelProps {
     mapAttributes: Attribute[];
     open: boolean;
     cancel: (() => void) | null;
-    save: ((updatedAttributes: Record<string, string | number | boolean>) => void) | null;
+    save: ((updatedAttributes: Record<string, string | number | boolean | Array<{ title: string; url: string }>>) => void) | null;
     mapId?: number; // Necesario para identificar qué RecordAttribute actualizar
     readOnly?: boolean;
 }
 
 const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save, mapId, readOnly = false}) => {
-    const [attributes, setAttributes] = useState<Record<string, string | number | boolean>>(shape?.attributes || {});
+    const [attributes, setAttributes] = useState<Record<string, string | number | boolean | Array<{ title: string; url: string }>>>(shape?.attributes || {});
+    const [comments, setComments] = useState<string>("");
+    const [links, setLinks] = useState<Array<{ title: string; url: string }>>([]);
     const updateRecordMutation = useUpdateRecord();
     const isReadOnly = readOnly || !save;
 
@@ -30,6 +32,12 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
 
     useEffect(() => {
         setAttributes(shape?.attributes || {});
+        // Cargar comments y links desde los atributos del shape
+        const shapeComments = shape?.attributes?.comments;
+        const shapeLinks = shape?.attributes?.links;
+        
+        setComments(typeof shapeComments === 'string' ? shapeComments : "");
+        setLinks(Array.isArray(shapeLinks) ? shapeLinks : []);
     }, [shape]);
 
     const handleSave = async () => {
@@ -49,10 +57,12 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
         const { recordId: _, recordAttributeId: __, "Rol SII": ___, ...recordAttributesData } = attributes;
 
         try {
-            // Actualizar el Record con sus recordAttributes en el backend
+            // Actualizar el Record con sus recordAttributes, comments y links en el backend
             console.log('Patch record payload:', { 
                 id: recordId, 
                 mapId,
+                comments,
+                links,
                 recordAttributes: [{
                     mapId: mapId,
                     attributes: recordAttributesData
@@ -62,6 +72,8 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
             await updateRecordMutation.mutateAsync({
                 id: recordId,
                 dto: {
+                    comments,
+                    links: links.length > 0 ? links : undefined,
                     recordAttributes: [{
                         mapId: mapId,
                         attributes: recordAttributesData
@@ -69,11 +81,9 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                 }
             });
 
-            // Llamar también a la función save local para actualizar el UI inmediatamente
-            if (save) {
-                save(attributes);
-            }
-
+            // React Query recargará automáticamente los registros después de la mutación
+            // No necesitamos actualizar el shape localmente, ya que se recargará del servidor
+            
             // Cerrar el panel después de guardar exitosamente
             if (cancel) {
                 cancel();
@@ -202,38 +212,86 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                     })
                 }
 
-                {/* Secciones adicionales de mockup */}
+                {/* Secciones adicionales */}
                 {shape && (
                     <>
-                        {/* Subdivisión / Fusión */}
-                        <div className="flex-none bg-amber-50 p-3 rounded-lg border border-amber-200 mt-2">
-                            <p className="text-sm font-semibold text-amber-900 mb-2">Subdivisión / Fusión</p>
-                            <select
-                                className="w-full p-2 border border-amber-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 mb-2"
-                                defaultValue=""
-                                disabled={isReadOnly}
-                            >
-                                <option value="">Sin operación</option>
-                                <option value="subdivision">Subdivisión</option>
-                                <option value="fusion">Fusión</option>
-                            </select>
-                            <textarea
-                                placeholder="Detalles de la operación..."
-                                className="w-full p-2 border border-amber-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
-                                rows={2}
-                                disabled={isReadOnly}
-                            />
-                        </div>
-
                         {/* Comentarios */}
                         <div className="flex-none bg-purple-50 p-3 rounded-lg border border-purple-200">
                             <p className="text-sm font-semibold text-purple-900 mb-2">Comentarios</p>
                             <textarea
+                                value={comments}
+                                onChange={(e) => setComments(e.target.value)}
                                 placeholder="Agregar comentarios sobre este registro..."
                                 className="w-full p-2 border border-purple-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                                 rows={3}
                                 disabled={isReadOnly}
                             />
+                        </div>
+
+                        {/* Enlaces externos */}
+                        <div className="flex-none bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                            <p className="text-sm font-semibold text-indigo-900 mb-2">Enlaces Externos</p>
+                            <div className="space-y-2">
+                                {links.map((link, index) => (
+                                    <div key={index} className="flex flex-col gap-1 bg-white p-2 rounded border border-indigo-200">
+                                        <div className="flex items-center justify-between">
+                                            <input
+                                                type="text"
+                                                value={link.title}
+                                                onChange={(e) => {
+                                                    const newLinks = [...links];
+                                                    newLinks[index].title = e.target.value;
+                                                    setLinks(newLinks);
+                                                }}
+                                                placeholder="Título del enlace"
+                                                className="flex-1 p-1 border border-indigo-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                disabled={isReadOnly}
+                                            />
+                                            {!isReadOnly && (
+                                                <button
+                                                    onClick={() => setLinks(links.filter((_, i) => i !== index))}
+                                                    className="ml-2 text-red-500 hover:text-red-700"
+                                                    title="Eliminar enlace"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="url"
+                                            value={link.url}
+                                            onChange={(e) => {
+                                                const newLinks = [...links];
+                                                newLinks[index].url = e.target.value;
+                                                setLinks(newLinks);
+                                            }}
+                                            placeholder="https://ejemplo.com"
+                                            className="p-1 border border-indigo-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                            disabled={isReadOnly}
+                                        />
+                                        {link.url && (
+                                            <a 
+                                                href={link.url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                            >
+                                                Abrir enlace →
+                                            </a>
+                                        )}
+                                    </div>
+                                ))}
+                                {!isReadOnly && (
+                                    <button
+                                        onClick={() => setLinks([...links, { title: '', url: '' }])}
+                                        className="w-full p-2 border-2 border-dashed border-indigo-300 rounded text-xs text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                    >
+                                        + Agregar enlace
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Otros mapas con este rol */}

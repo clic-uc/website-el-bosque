@@ -138,6 +138,8 @@ const MapPage = () => {
               recordId: record.id,
               recordAttributeId: ra.id,
               "Rol SII": record.role?.roleId || "",
+              comments: record.comments || "",
+              links: record.links || [],
               ...(ra.attributes || {}),
             },
           });

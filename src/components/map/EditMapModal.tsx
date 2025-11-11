@@ -19,6 +19,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
   const [department, setDepartment] = useState<string>('');
   const [mapName, setMapName] = useState<string>('');
   const [attributeFields, setAttributeFields] = useState<string>('');
+  const [hasRole, setHasRole] = useState<boolean>(false);
 
   const { data: map, isLoading: isLoadingMap } = useMap(mapId);
   const updateMapMutation = useUpdateMap();
@@ -30,6 +31,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
       setDepartment(map.department);
       setMapName(mapAttributes.name || '');
       setAttributeFields((mapAttributes.fields || []).join('\n'));
+      setHasRole(map.hasRole || false);
     }
   }, [map]);
 
@@ -44,6 +46,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
 
     const updatedMap: UpdateMapDto = {
       department: department as Department,
+      hasRole,
       attributes: {
         name: mapName,
         fields: fieldsArray,
@@ -151,6 +154,21 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
                 disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
                 required
               />
+            </div>
+
+            {/* Checkbox hasRole */}
+            <div className="flex items-center">
+              <input
+                id="has-role"
+                type="checkbox"
+                checked={hasRole}
+                onChange={(e) => setHasRole(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
+              />
+              <label htmlFor="has-role" className="ml-2 text-sm text-gray-700">
+                Este mapa incluye Rol SII
+              </label>
             </div>
 
             {/* Botones */}

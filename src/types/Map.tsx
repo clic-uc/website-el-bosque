@@ -5,6 +5,7 @@ export interface Map {
     name: string;
     department: "edificacion" | "ejecucion" | "emergencias" | "vivienda";
     attributes: Attribute[];
+    hasRole: boolean;
     drawable: boolean;
     shapeType: "point" | "line" | "poly";
     shapes: AnyShape[];

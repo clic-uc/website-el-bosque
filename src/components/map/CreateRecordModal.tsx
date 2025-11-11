@@ -21,6 +21,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
   const [lat, setLat] = useState<string>('');
   const [lon, setLon] = useState<string>('');
   const [attributes, setAttributes] = useState<Record<string, string>>({});
+  const [comments, setComments] = useState<string>('');
+  const [links, setLinks] = useState<Array<{ title: string; url: string }>>([]);
   const [isSelectingOnMap, setIsSelectingOnMap] = useState(false);
 
   const createRecordMutation = useCreateRecord();
@@ -87,6 +89,8 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
       const payload = {
         lat: latNum,
         lon: lonNum,
+        comments: comments.trim() || undefined,
+        links: links.length > 0 ? links : undefined,
         recordAttributes: [
           {
             mapId: selectedMapId,
@@ -244,6 +248,77 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Comentarios */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comentarios
+            </label>
+            <textarea
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Añade comentarios adicionales sobre este registro..."
+            />
+          </div>
+
+          {/* Enlaces */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Enlaces
+            </label>
+            <div className="space-y-3">
+              {links.map((link, index) => (
+                <div key={index} className="flex gap-2 items-start">
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={link.title}
+                      onChange={(e) => {
+                        const newLinks = [...links];
+                        newLinks[index].title = e.target.value;
+                        setLinks(newLinks);
+                      }}
+                      placeholder="Título del enlace"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="url"
+                      value={link.url}
+                      onChange={(e) => {
+                        const newLinks = [...links];
+                        newLinks[index].url = e.target.value;
+                        setLinks(newLinks);
+                      }}
+                      placeholder="https://ejemplo.com"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newLinks = links.filter((_, i) => i !== index);
+                      setLinks(newLinks);
+                    }}
+                    className="mt-1 p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Eliminar enlace"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setLinks([...links, { title: '', url: '' }])}
+                className="w-full rounded-lg border-2 border-dashed border-gray-300 px-4 py-3 text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              >
+                + Añadir enlace
+              </button>
+            </div>
+          </div>
 
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-4 border-t">

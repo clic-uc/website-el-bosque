@@ -1,7 +1,7 @@
 export interface Shape {
     id: string;
     layerId: string
-    attributes: Record<string, string | number | boolean>;
+    attributes: Record<string, string | number | boolean | Array<{ title: string; url: string }>>;
 }
 
 export interface PointShape extends Shape {

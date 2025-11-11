@@ -21,6 +21,7 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
   const [department, setDepartment] = useState<string>('');
   const [mapName, setMapName] = useState<string>('');
   const [attributeFields, setAttributeFields] = useState<string>('');
+  const [hasRole, setHasRole] = useState<boolean>(false);
 
   const createMapMutation = useCreateMap();
 
@@ -39,6 +40,7 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
 
     const newMap: Omit<CreateMapDto, 'key'> = {
       department: department as Department,
+      hasRole,
       attributes: {
         name: mapName,
         fields: fieldsArray,
@@ -134,6 +136,21 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
               disabled={createMapMutation.isPending}
               required
             />
+          </div>
+
+          {/* Checkbox hasRole */}
+          <div className="flex items-center">
+            <input
+              id="has-role"
+              type="checkbox"
+              checked={hasRole}
+              onChange={(e) => setHasRole(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              disabled={createMapMutation.isPending}
+            />
+            <label htmlFor="has-role" className="ml-2 text-sm text-gray-700">
+              Este mapa incluye Rol SII
+            </label>
           </div>
 
           {/* Botones */}

@@ -184,7 +184,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         className || ""
     );
 
-    const save = useCallback((newAttributes: Record<string, string | number | boolean>) => {
+    const save = useCallback((newAttributes: Record<string, string | number | boolean | Array<{ title: string; url: string }>>) => {
         if (!selectedShape) return;
 
         const newShape: AnyShape = {

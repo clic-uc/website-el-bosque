@@ -41,6 +41,7 @@ export function transformBackendMapToFrontend(backendMap: MapEntity): Map {
     name: (attributes?.name as string) || backendMap.key,
     department: mapDepartment(backendMap.department),
     attributes: frontendAttributes,
+    hasRole: backendMap.hasRole,
     drawable: true, // Por defecto true, ajustar según necesidad
     shapeType: "point", // Por defecto point, ajustar según el tipo de mapa
     shapes: [], // Inicialmente vacío, se cargarán los records después

@@ -17,6 +17,7 @@ export interface MapEntity {
   key: string;
   department: Department;
   attributes: Record<string, unknown>;
+  hasRole: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +27,10 @@ export interface Role {
   lat?: number;
   lon?: number;
   description?: string;
+  operations?: Array<{
+    operation: 'Subdivisión' | 'Fusión' | 'Modificación' | 'Rectificación';
+    comment: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +50,8 @@ export interface GeographicalRecord {
   lat: number;
   lon: number;
   summary?: string;
+  comments?: string;
+  links?: Array<{ title: string; url: string }>;
   role?: Role; // El roleId viene dentro de role.roleId
   recordAttributes?: RecordAttribute[];
   createdAt: string;
@@ -56,12 +63,14 @@ export interface CreateMapDto {
   key: string;
   department: Department;
   attributes: Record<string, unknown>;
+  hasRole?: boolean;
 }
 
 export interface UpdateMapDto {
   key?: string;
   department?: Department;
   attributes?: Record<string, unknown>;
+  hasRole?: boolean;
 }
 
 export interface CreateRoleDto {
@@ -69,12 +78,20 @@ export interface CreateRoleDto {
   lat?: number;
   lon?: number;
   description?: string;
+  operations?: Array<{
+    operation: 'Subdivisión' | 'Fusión' | 'Modificación' | 'Rectificación';
+    comment: string;
+  }>;
 }
 
 export interface UpdateRoleDto {
   lat?: number;
   lon?: number;
   description?: string;
+  operations?: Array<{
+    operation: 'Subdivisión' | 'Fusión' | 'Modificación' | 'Rectificación';
+    comment: string;
+  }>;
 }
 
 export interface CreateRecordDto {
@@ -82,6 +99,8 @@ export interface CreateRecordDto {
   lat?: number;
   lon?: number;
   summary?: string;
+  comments?: string;
+  links?: Array<{ title: string; url: string }>;
   recordAttributes?: Array<{
     mapId: number;
     attributes: Record<string, unknown>;
@@ -93,6 +112,8 @@ export interface UpdateRecordDto {
   lat?: number;
   lon?: number;
   summary?: string;
+  comments?: string;
+  links?: Array<{ title: string; url: string }>;
   recordAttributes?: Array<{
     mapId: number;
     attributes: Record<string, unknown>;
