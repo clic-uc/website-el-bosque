@@ -11,11 +11,13 @@ import {v4} from "uuid";
 import {LatLng, type LeafletEventHandlerFnMap} from "leaflet";
 import ShapeInput from "./ShapeInput.tsx";
 import ImportRecordsModal from "./ImportRecordsModal.tsx";
+import PolygonLayers from "./PolygonLayers.tsx";
 
 interface MapDisplayProps {
     maps: Map[];
     activeMap: Map;
     activeMaps?: number[];
+    activePolygons?: Set<string>;
     onCreateShape: (shape: AnyShape, success: (shape: AnyShape) => void, errorCallback: (error: string) => void) => void;
     onUpdateShape: (shape: AnyShape, success: (shape: AnyShape) => void,  errorCallback: (error: string) => void) => void;
     onDeleteShape: (shapeId: string, success: () => void, errorCallback: (error: string) => void) => void;
@@ -72,6 +74,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         maps,
         activeMap,
         activeMaps,
+        activePolygons = new Set(),
         onCreateShape,
         onUpdateShape,
         onDeleteShape,
@@ -371,10 +374,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     return (
         <div className={mergedClassNames}>
             <MapContainer
-                center={[
-                    (config.mapBounds.maxLatitude + config.mapBounds.minLatitude) / 2,
-                    (config.mapBounds.maxLongitude + config.mapBounds.minLongitude) / 2
-                ]}
+                center={[-33.56056374435794, -70.66143957649248]}
                 zoom={14}
                 bounds={[[config.mapBounds.minLatitude, config.mapBounds.minLongitude], [config.mapBounds.maxLatitude, config.mapBounds.maxLongitude]]}
                 style={{ width: '100%', height: '100%' }}
@@ -388,6 +388,10 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 <TileLayer
                     url={config.mapUrl}
                 />
+                
+                {/* Capas de polígonos GeoJSON */}
+                <PolygonLayers activePolygons={activePolygons} />
+                
                 {maps.filter(map => !activeMaps || activeMaps.includes(map.id)).map(map => {
                     const pointShapes = map.shapes.filter(shape => shape.type === "point");
                     const nonPointShapes = map.shapes.filter(shape => shape.type !== "point");

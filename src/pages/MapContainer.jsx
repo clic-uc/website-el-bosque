@@ -11,7 +11,7 @@ const MapContainer = () => {
 
   return (
     <Map
-      defaultCenter={{ lat: -33.5607, lng: -70.6766 }}
+      defaultCenter={{ lat: -33.56244836179091, lng: -70.660 }}
       defaultZoom={14}
       gestureHandling="greedy"
       disableDefaultUI={false}

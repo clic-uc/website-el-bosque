@@ -10,6 +10,8 @@ type SideBarProps = {
     onToggleCollapse?: () => void
     onAddMapClick?: () => void
     onEditMapClick?: (map: Map) => void
+    activePolygons?: Set<string>
+    onTogglePolygon?: (polygonId: string) => void
 }
 
 const SideBar: React.FC<SideBarProps> = ({ 
@@ -20,12 +22,24 @@ const SideBar: React.FC<SideBarProps> = ({
     onToggleCollapse,
     onAddMapClick,
     onEditMapClick,
+    activePolygons: externalActivePolygons,
+    onTogglePolygon,
 }) => {
     const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(
         new Set(["edificacion", "ejecucion", "emergencias", "vivienda"])
     );
     const [showPolygons, setShowPolygons] = useState<boolean>(true);
-    const [activePolygons, setActivePolygons] = useState<Set<string>>(new Set());
+    
+    // Usar estado externo si está disponible, si no usar estado interno
+    const activePolygons = externalActivePolygons || new Set<string>();
+    
+    const handleTogglePolygon = (polygonId: string) => {
+        if (onTogglePolygon) {
+            onTogglePolygon(polygonId);
+        } else {
+            console.warn('⚠️ onTogglePolygon no está definido');
+        }
+    };
 
     // Agrupar mapas por departamento
     const groupedMaps = useMemo(() => {
@@ -171,16 +185,7 @@ const SideBar: React.FC<SideBarProps> = ({
                                     <input
                                         type="checkbox"
                                         checked={activePolygons.has('comuna')}
-                                        onChange={() => {
-                                            const newSet = new Set(activePolygons);
-                                            if (newSet.has('comuna')) {
-                                                newSet.delete('comuna');
-                                            } else {
-                                                newSet.add('comuna');
-                                            }
-                                            setActivePolygons(newSet);
-                                            console.log('🗺️ Toggle polígono (mockup):', 'comuna');
-                                        }}
+                                        onChange={() => handleTogglePolygon('comuna')}
                                         className="w-4 h-4 flex-shrink-0 mt-0.5"
                                     />
                                     <span className="text-sm font-medium break-words">
@@ -193,16 +198,7 @@ const SideBar: React.FC<SideBarProps> = ({
                                     <input
                                         type="checkbox"
                                         checked={activePolygons.has('sectores')}
-                                        onChange={() => {
-                                            const newSet = new Set(activePolygons);
-                                            if (newSet.has('sectores')) {
-                                                newSet.delete('sectores');
-                                            } else {
-                                                newSet.add('sectores');
-                                            }
-                                            setActivePolygons(newSet);
-                                            console.log('🗺️ Toggle polígono (mockup):', 'sectores');
-                                        }}
+                                        onChange={() => handleTogglePolygon('sectores')}
                                         className="w-4 h-4 flex-shrink-0 mt-0.5"
                                     />
                                     <span className="text-sm font-medium break-words">
@@ -215,16 +211,7 @@ const SideBar: React.FC<SideBarProps> = ({
                                     <input
                                         type="checkbox"
                                         checked={activePolygons.has('villas-poblaciones')}
-                                        onChange={() => {
-                                            const newSet = new Set(activePolygons);
-                                            if (newSet.has('villas-poblaciones')) {
-                                                newSet.delete('villas-poblaciones');
-                                            } else {
-                                                newSet.add('villas-poblaciones');
-                                            }
-                                            setActivePolygons(newSet);
-                                            console.log('🗺️ Toggle polígono (mockup):', 'villas-poblaciones');
-                                        }}
+                                        onChange={() => handleTogglePolygon('villas-poblaciones')}
                                         className="w-4 h-4 flex-shrink-0 mt-0.5"
                                     />
                                     <span className="text-sm font-medium break-words">

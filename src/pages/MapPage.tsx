@@ -41,6 +41,9 @@ const MapPage = () => {
   // State: Mapas activos (inicialmente vacío - el usuario debe seleccionar)
   const [activeMaps, setActiveMaps] = useState<number[]>([]);
   
+  // State: Polígonos activos (para mostrar capas GeoJSON)
+  const [activePolygons, setActivePolygons] = useState<Set<string>>(new Set());
+  
   // State: Shapes creados localmente por el usuario (no persistidos aún en backend)
   const [localShapes, setLocalShapes] = useState<Record<number, AnyShape[]>>({});
 
@@ -144,6 +147,18 @@ const MapPage = () => {
     setActiveMaps((prev) =>
       prev.includes(id) ? prev.filter((mapId) => mapId !== id) : [...prev, id]
     );
+  };
+
+  const handleTogglePolygon = (polygonId: string) => {
+    setActivePolygons(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(polygonId)) {
+        newSet.delete(polygonId);
+      } else {
+        newSet.add(polygonId);
+      }
+      return newSet;
+    });
   };
 
   const mapsWithShapes = useMemo(() => {
@@ -351,6 +366,8 @@ const MapPage = () => {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onAddMapClick={canManageMaps ? handleOpenAddMapModal : undefined}
           onEditMapClick={canManageMaps ? handleOpenEditMapModal : undefined}
+          activePolygons={activePolygons}
+          onTogglePolygon={handleTogglePolygon}
         />
         
         {/* Botón para expandir sidebar cuando está colapsado */}
@@ -429,6 +446,7 @@ const MapPage = () => {
                 maps={mapsForDisplay}
                 activeMap={activeMap}
                 activeMaps={activeMaps}
+                activePolygons={activePolygons}
                 className="h-full w-full"
                 onCreateShape={handleCreateShape}
                 onUpdateShape={handleUpdateShape}
