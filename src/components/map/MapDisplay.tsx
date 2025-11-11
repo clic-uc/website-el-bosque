@@ -9,7 +9,6 @@ import {twMerge} from "tailwind-merge";
 import SidePanel from "./SidePanel.tsx";
 import {v4} from "uuid";
 import {LatLng, type LeafletEventHandlerFnMap} from "leaflet";
-import ShapeInput from "./ShapeInput.tsx";
 import ImportRecordsModal from "./ImportRecordsModal.tsx";
 import PolygonLayers from "./PolygonLayers.tsx";
 
@@ -498,13 +497,6 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 mapId={activeMap.id}
                 readOnly={!canEditAttributes}
             />
-            {activeMap.drawable && !selectedShape && canManageShapes && (
-                <ShapeInput
-                    type={activeMap.shapeType}
-                    onCreate={onInputCreate}
-                    inputGroupRef={inputGroupRef}
-                />
-            )}
             
             {/* Botón flotante para importar records */}
             {canImport && (
