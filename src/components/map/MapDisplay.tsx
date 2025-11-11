@@ -1,7 +1,7 @@
 import {Map} from "../../types/Map";
 import {AnyShape, PointShape} from "../../types/Shape.tsx";
 import {useConfig} from "../../hooks/useConfig.tsx";
-import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer, useMap} from "react-leaflet";
+import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer, useMap, useMapEvents} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import {EditControl} from "react-leaflet-draw";
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -26,6 +26,7 @@ interface MapDisplayProps {
     canManageShapes?: boolean;
     canEditAttributes?: boolean;
     canImport?: boolean;
+    mapClickCallback?: ((lat: number, lon: number) => void) | null;
 }
 
 const parsePolyLatLngs = (latLngs: LatLng[][]) => {
@@ -68,6 +69,21 @@ const MapZoomHandler: React.FC<{
     return null;
 };
 
+// Componente auxiliar para manejar clics en el mapa (para crear registros)
+const MapClickHandler: React.FC<{
+    callback: ((lat: number, lon: number) => void) | null;
+}> = ({ callback }) => {
+    useMapEvents({
+        click: (e) => {
+            if (callback) {
+                callback(e.latlng.lat, e.latlng.lng);
+            }
+        },
+    });
+
+    return null;
+};
+
 const MapDisplay: React.FC<MapDisplayProps> = (
     {
         maps,
@@ -83,6 +99,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         canManageShapes = true,
         canEditAttributes = true,
         canImport = true,
+        mapClickCallback = null,
     },
 ) => {
 
@@ -384,6 +401,9 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                     onCleared={onSearchShapeCleared || (() => {})}
                 />
                 
+                {/* Handler para clics en el mapa (crear registros) */}
+                <MapClickHandler callback={mapClickCallback} />
+                
                 <TileLayer
                     url={config.mapUrl}
                 />
@@ -410,13 +430,16 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                                             onCreated={onDrawCreate}
                                             onEditMove={onEditMove}
                                             onEditVertex={onEditVertex}
-                                            draw={map.shapeType === "point" ?
-                                                markerDrawOptions :
-                                                map.shapeType === "line" ?
-                                                    pointDrawOptions :
-                                                    polyDrawOptions}
+                                            draw={{
+                                                polyline: false,
+                                                polygon: false,
+                                                rectangle: false,
+                                                circle: false,
+                                                marker: false,
+                                                circlemarker: false,
+                                            }}
                                             edit={{
-                                                remove: {},
+                                                remove: false,
                                                 edit: false,
                                             }}
                                             position={"topright"}

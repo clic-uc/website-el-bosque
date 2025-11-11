@@ -78,9 +78,9 @@ export interface UpdateRoleDto {
 }
 
 export interface CreateRecordDto {
-  roleId: string;
-  lat: number;
-  lon: number;
+  roleId?: string;
+  lat?: number;
+  lon?: number;
   summary?: string;
   recordAttributes?: Array<{
     mapId: number;

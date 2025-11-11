@@ -14,6 +14,7 @@ import { transformBackendMapToFrontend } from "../utils/mapTransformers";
 import type { GeographicalRecord } from "../types/api.types";
 import AddMapModal from "../components/map/AddMapModal.tsx";
 import EditMapModal from "../components/map/EditMapModal.tsx";
+import CreateRecordModal from "../components/map/CreateRecordModal.tsx";
 import type { Map } from "../types/Map.tsx";
 import { getRoleLabel, isAdmin, isEditor, useCurrentRole } from "../auth/role";
 import FilterSideBar from "../components/map/FilterSideBar.tsx";
@@ -65,6 +66,10 @@ const MapPage = () => {
   // State: Modal de editar mapa
   const [isEditMapModalOpen, setEditMapModalOpen] = useState(false);
   const [editingMap, setEditingMap] = useState<Map | null>(null);
+
+  // State: Modal de crear registro
+  const [isCreateRecordModalOpen, setCreateRecordModalOpen] = useState(false);
+  const [mapClickCallback, setMapClickCallback] = useState<((lat: number, lon: number) => void) | null>(null);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<Record<string, string | string[]>>({});
@@ -276,6 +281,24 @@ const MapPage = () => {
     setEditMapModalOpen(false);
   };
 
+  // Handlers para CreateRecordModal
+  const handleOpenCreateRecordModal = () => {
+    setCreateRecordModalOpen(true);
+  };
+
+  const handleCloseCreateRecordModal = () => {
+    setCreateRecordModalOpen(false);
+    setMapClickCallback(null);
+  };
+
+  const handleMapClickForRecord = (callback: (lat: number, lon: number) => void) => {
+    setMapClickCallback(() => callback);
+  };
+
+  const handleMapClickCancel = () => {
+    setMapClickCallback(null);
+  };
+
 
   // Loading states
   if (mapsLoading) {
@@ -357,6 +380,15 @@ const MapPage = () => {
             mapId={editingMap ? editingMap.id : null}
           />
         )}
+        {canManageMaps && (
+          <CreateRecordModal
+            isOpen={isCreateRecordModalOpen}
+            onClose={handleCloseCreateRecordModal}
+            maps={mapsForDisplay}
+            onMapClick={handleMapClickForRecord}
+            onMapClickCancel={handleMapClickCancel}
+          />
+        )}
         
         <SideBar
           maps={mapsForDisplay}
@@ -395,40 +427,38 @@ const MapPage = () => {
         
         <div className="relative flex flex-1 flex-col min-w-0 overflow-hidden">
           {/* Barra de búsqueda y botones superiores */}
-          <div className="z-[1500] flex items-center gap-3 border-b bg-white p-3 shadow-sm">
-            <SearchBar
-              shapes={allShapes}
-              onResultSelect={handleSearchResultSelect}
-            />
-            <button
-              onClick={() => setIsFilterOpen(prev => !prev)}
-              className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200 flex gap-2 items-center"
-            >
-              <LuFilter />
-              Filtros
-            </button>
+          <div className="z-[1500] flex items-center justify-between gap-3 border-b bg-white p-3 shadow-sm">
+            {/* Lado izquierdo: Búsqueda y Filtros */}
+            <div className="flex items-center gap-3 flex-1">
+              <SearchBar
+                shapes={allShapes}
+                onResultSelect={handleSearchResultSelect}
+              />
+              <button
+                onClick={() => setIsFilterOpen(prev => !prev)}
+                className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200 flex gap-2 items-center whitespace-nowrap"
+              >
+                <LuFilter />
+                Filtros
+              </button>
+            </div>
             
-            {/* Botones de acciones */}
-            <div className="flex items-center gap-2">
+            {/* Lado derecho: Botones de acciones */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {canManageMaps && (
-                <>
-                  <button
-                    onClick={() => alert('Funcionalidad de Subdividir en desarrollo')}
-                    className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
-                  >
-                    Subdividir
-                  </button>
-                  <button
-                    onClick={() => alert('Funcionalidad de Fusionar en desarrollo')}
-                    className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-200"
-                  >
-                    Fusionar
-                  </button>
-                </>
+                <button
+                  onClick={handleOpenCreateRecordModal}
+                  className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700 flex items-center gap-2 whitespace-nowrap"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Crear Registro
+                </button>
               )}
               <button
                 onClick={() => setViewMode(viewMode === 'map' ? 'table' : 'map')}
-                className={`rounded-lg px-4 py-2 font-medium text-white transition-colors ${
+                className={`rounded-lg px-4 py-2 font-medium text-white transition-colors whitespace-nowrap ${
                   viewMode === 'table'
                     ? 'bg-gray-600 hover:bg-gray-700'
                     : 'bg-blue-600 hover:bg-blue-700'
@@ -456,6 +486,7 @@ const MapPage = () => {
                 canManageShapes={canManageMaps}
                 canEditAttributes={canManageMaps}
                 canImport={canManageMaps}
+                mapClickCallback={mapClickCallback}
               />
             ) : (
               <RecordsTable
