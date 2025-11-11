@@ -14,6 +14,7 @@ import PolygonLayers from "./PolygonLayers.tsx";
 import CoordinateUpdateModal from "./CoordinateUpdateModal.tsx";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../lib/api-client";
+import { createLucideIcon } from "../../utils/leafletIcons";
 
 interface MapDisplayProps {
     maps: Map[];
@@ -202,7 +203,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
         className || ""
     );
 
-    const save = useCallback((newAttributes: Record<string, string | number | boolean | Array<{ title: string; url: string }>>) => {
+    const save = useCallback((newAttributes: Record<string, string | number | boolean | Array<{ title: string; url: string }> | Array<{ operation: string; comment: string }>>) => {
         if (!selectedShape) return;
 
         const newShape: AnyShape = {
@@ -581,6 +582,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                                         }}
                                         key={shape.id}
                                         position={shape.coordinates}
+                                        icon={createLucideIcon(shape.icon, shape.iconColor)}
                                         draggable={canEditAttributes && map === activeMap}
                                         eventHandlers={map === activeMap ? eventHandlers(shape) : {}}
                                     />
@@ -598,6 +600,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 save={canEditAttributes ? save : null}
                 mapId={activeMap.id}
                 readOnly={!canEditAttributes}
+                hasRole={activeMap.hasRole}
             />
             
             {/* Botón flotante para importar records */}
@@ -605,7 +608,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 <button
                     onClick={() => setIsImportModalOpen(true)}
                     className="absolute bottom-6 left-6 z-[1000] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg shadow-lg transition-colors flex items-center space-x-2"
-                    title="Importar records desde CSV"
+                    title="Importar registros desde CSV"
                 >
                     <svg 
                         xmlns="http://www.w3.org/2000/svg" 

@@ -7,9 +7,10 @@ interface RecordsTableProps {
   isLoading?: boolean;
   mapId?: number;
   searchTerm?: string;
+  hasRole?: boolean;
 }
 
-const RecordsTable = ({ records, isLoading, mapId, searchTerm = '' }: RecordsTableProps) => {
+const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = false }: RecordsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   
@@ -191,9 +192,11 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '' }: RecordsTab
         <table className="border-collapse table-auto">
           <thead className="bg-gray-100 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap">
-                Rol SII
-              </th>
+              {hasRole && (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap">
+                  Rol SII
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap">
                 Latitud
               </th>
@@ -224,24 +227,26 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '' }: RecordsTab
                   className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} ${editing ? 'bg-blue-50' : ''}`}
                 >
                   {/* Rol SII - Editable */}
-                  <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
-                    {editing ? (
-                      <input
-                        type="text"
-                        value={getCellValue(record.id, 'roleId', record.role?.roleId || '')}
-                        onChange={(e) => updateCellValue(record.id, 'roleId', e.target.value)}
-                        className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="00000-00000"
-                      />
-                    ) : (
-                      <span
-                        onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
-                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block"
-                      >
-                        {record.role?.roleId || '-'}
-                      </span>
-                    )}
-                  </td>
+                  {hasRole && (
+                    <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
+                      {editing ? (
+                        <input
+                          type="text"
+                          value={getCellValue(record.id, 'roleId', record.role?.roleId || '')}
+                          onChange={(e) => updateCellValue(record.id, 'roleId', e.target.value)}
+                          className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="00000-00000"
+                        />
+                      ) : (
+                        <span
+                          onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block"
+                        >
+                          {record.role?.roleId || '-'}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   
                   {/* Latitud - Editable */}
                   <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">

@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useMap, useUpdateMap, useDeleteMap } from '../../hooks/useMaps.ts';
 import { Department, type UpdateMapDto } from '../../types/api.types.ts';
 import { getDepartmentLabel } from '../../utils/mapTransformers.ts';
+import { Palette } from 'lucide-react';
+import IconPicker from '../common/IconPicker';
+import IconRenderer from '../common/IconRenderer';
 
 interface EditMapModalProps {
   isOpen: boolean;
@@ -20,6 +23,9 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
   const [mapName, setMapName] = useState<string>('');
   const [attributeFields, setAttributeFields] = useState<string>('');
   const [hasRole, setHasRole] = useState<boolean>(false);
+  const [icon, setIcon] = useState<string>('building-2');
+  const [iconColor, setIconColor] = useState<string>('#6b7280');
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
 
   const { data: map, isLoading: isLoadingMap } = useMap(mapId);
   const updateMapMutation = useUpdateMap();
@@ -32,6 +38,8 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
       setMapName(mapAttributes.name || '');
       setAttributeFields((mapAttributes.fields || []).join('\n'));
       setHasRole(map.hasRole || false);
+      setIcon(map.icon || 'building-2');
+      setIconColor(map.iconColor || '#6b7280');
     }
   }, [map]);
 
@@ -47,6 +55,8 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
     const updatedMap: UpdateMapDto = {
       department: department as Department,
       hasRole,
+      icon,
+      iconColor,
       attributes: {
         name: mapName,
         fields: fieldsArray,
@@ -83,9 +93,10 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]">
-      <div className="bg-white rounded-lg shadow-xl p-6 flex flex-col max-w-[60%] w-full">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000] p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] flex flex-col m-auto">
+        {/* Header fijo */}
+        <div className="flex-shrink-0 flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800">Editar Mapa</h2>
           <button
             onClick={onClose}
@@ -96,10 +107,12 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
           </button>
         </div>
 
-        {isLoadingMap ? (
-          <div>Cargando datos del mapa...</div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Contenido scrolleable */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoadingMap ? (
+            <div className="p-6">Cargando datos del mapa...</div>
+          ) : (
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {/* Selector de Departamento */}
             <div>
               <label htmlFor="department-select" className="block text-sm font-medium text-gray-700 mb-2">
@@ -171,6 +184,34 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
               </label>
             </div>
 
+            {/* Editor de Ícono */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ícono del Mapa
+              </label>
+              <div className="flex items-center gap-4">
+                {/* Vista previa del ícono */}
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-300 rounded-md">
+                  <IconRenderer name={icon} color={iconColor} size={24} />
+                  <div className="text-sm">
+                    <p className="font-mono text-gray-900">{icon}</p>
+                    <p className="text-gray-500 text-xs">{iconColor}</p>
+                  </div>
+                </div>
+                
+                {/* Botón para abrir picker */}
+                <button
+                  type="button"
+                  onClick={() => setIsIconPickerOpen(true)}
+                  className="px-4 py-2 text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
+                >
+                  <Palette size={18} />
+                  Editar Ícono
+                </button>
+              </div>
+            </div>
+
             {/* Botones */}
             <div className="flex justify-between items-center pt-2">
               {/* Botón de Eliminar a la izquierda */}
@@ -204,7 +245,20 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
             </div>
           </form>
         )}
+        </div>
       </div>
+
+      {/* Modal de selección de ícono */}
+      <IconPicker
+        isOpen={isIconPickerOpen}
+        onClose={() => setIsIconPickerOpen(false)}
+        onSelect={(selectedIcon, selectedColor) => {
+          setIcon(selectedIcon);
+          setIconColor(selectedColor);
+        }}
+        currentIcon={icon}
+        currentColor={iconColor}
+      />
     </div>
   );
 };

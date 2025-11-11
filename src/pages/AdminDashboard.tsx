@@ -5,7 +5,7 @@ import { getRoleLabel, isAdmin, useCurrentRole } from '../auth/role';
 import type { Roles } from '../types/globals';
 import { SearchUsers, type UserItem } from '../features/admin/SearchUsers';
 import { RoleActions } from '../features/admin/RoleActions';
-import { apiGet } from '../lib/api';
+import { apiClient } from '../lib/api-client';
 
 type Feedback = { type: 'info' | 'error'; message: string };
 
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
     setFeedback(null);
     setViewState('roster');
     try {
-      const response = await apiGet<RosterResponse>(
+      const { data: response } = await apiClient.get<RosterResponse>(
         `/admin/users/all?limit=${PAGE_SIZE}&offset=${requestedOffset}`,
       );
 

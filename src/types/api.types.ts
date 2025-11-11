@@ -18,6 +18,8 @@ export interface MapEntity {
   department: Department;
   attributes: Record<string, unknown>;
   hasRole: boolean;
+  icon?: string;
+  iconColor?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,6 +73,8 @@ export interface UpdateMapDto {
   department?: Department;
   attributes?: Record<string, unknown>;
   hasRole?: boolean;
+  icon?: string;
+  iconColor?: string;
 }
 
 export interface CreateRoleDto {

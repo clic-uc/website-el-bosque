@@ -65,9 +65,10 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]">
-      <div className="bg-white rounded-lg shadow-xl p-6 flex flex-col max-w-[60%] w-full">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000] p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] flex flex-col m-auto">
+        {/* Header fijo */}
+        <div className="flex-shrink-0 flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800">Agregar Nuevo Mapa</h2>
           <button
             onClick={onClose}
@@ -78,7 +79,9 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Contenido scrolleable */}
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Selector de Departamento */}
           <div>
             <label htmlFor="department-select" className="block text-sm font-medium text-gray-700 mb-2">
@@ -172,6 +175,7 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

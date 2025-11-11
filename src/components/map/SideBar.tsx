@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Map } from "../../types/Map.tsx";
 import { groupMapsByDepartment, getDepartmentLabel } from "../../utils/mapTransformers";
+import IconRenderer from "../common/IconRenderer";
 
 type SideBarProps = {
     maps: Map[]
@@ -67,15 +68,15 @@ const SideBar: React.FC<SideBarProps> = ({
                     {/* Header fijo con botón de colapsar */}
                     <div className="flex-shrink-0 border-b bg-white shadow-sm">
                         <div className="flex items-center justify-between px-4 py-2">
-                            <h2 className="text-base font-bold text-gray-800">Mapas</h2>
+                            <h2 className="text-base font-bold text-gray-800">Departamentos y Mapas</h2>
                             <div className="flex items-center gap-2">
                                 {onAddMapClick && (
                                     <button
                                         onClick={onAddMapClick}
-                                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                                        className="flex-shrink-0 p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-300"
                                         title="Añadir mapa"
                                     >
-                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
                                         </svg>
                                     </button>
@@ -83,10 +84,10 @@ const SideBar: React.FC<SideBarProps> = ({
                                 {onToggleCollapse && (
                                     <button
                                         onClick={onToggleCollapse}
-                                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                                        className="flex-shrink-0 p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-300"
                                         title="Colapsar barra lateral"
                                     >
-                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                         </svg>
                                     </button>
@@ -130,7 +131,13 @@ const SideBar: React.FC<SideBarProps> = ({
                                                         onChange={() => onToggleMap(map.id)}
                                                         className="w-4 h-4 flex-shrink-0 mt-0.5"
                                                     />
-                                                    <span className="text-sm font-medium break-words">
+                                                    <IconRenderer 
+                                                        name={map.icon} 
+                                                        color={map.iconColor}
+                                                        size={18}
+                                                        className="flex-shrink-0 mt-0.5"
+                                                    />
+                                                    <span className="text-sm font-medium break-words flex-1">
                                                         {map.name}
                                                     </span>
                                                     {onEditMapClick && (

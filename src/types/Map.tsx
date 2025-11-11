@@ -10,6 +10,8 @@ export interface Map {
     shapeType: "point" | "line" | "poly";
     shapes: AnyShape[];
     layers: Layer[];
+    icon?: string;
+    iconColor?: string;
 }
 
 export type Layer = {

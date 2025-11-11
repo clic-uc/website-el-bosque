@@ -1,7 +1,9 @@
 export interface Shape {
     id: string;
     layerId: string
-    attributes: Record<string, string | number | boolean | Array<{ title: string; url: string }>>;
+    attributes: Record<string, string | number | boolean | Array<{ title: string; url: string }> | Array<{ operation: string; comment: string }>>;
+    icon?: string;
+    iconColor?: string;
 }
 
 export interface PointShape extends Shape {

@@ -124,7 +124,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]">
       <div className="bg-white rounded-lg shadow-xl p-6 flex flex-col max-w-[60%]">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Importar Records desde CSV</h2>
+          <h2 className="text-xl font-bold text-gray-800">Importar Registros desde CSV</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
@@ -148,7 +148,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
               disabled={isPending}
               required
             >
-              <option value="">-- Selecciona un mapa --</option>
+              <option value="">Selecciona un mapa</option>
               {maps.map((map) => (
                 <option key={map.id} value={map.id}>
                   {map.name} ({map.department})

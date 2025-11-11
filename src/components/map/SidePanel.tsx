@@ -8,13 +8,14 @@ interface SidePanelProps {
     mapAttributes: Attribute[];
     open: boolean;
     cancel: (() => void) | null;
-    save: ((updatedAttributes: Record<string, string | number | boolean | Array<{ title: string; url: string }>>) => void) | null;
+    save: ((updatedAttributes: Record<string, string | number | boolean | Array<{ title: string; url: string }> | Array<{ operation: string; comment: string }>>) => void) | null;
     mapId?: number; // Necesario para identificar qué RecordAttribute actualizar
+    hasRole?: boolean; // Si el mapa incluye información de rol
     readOnly?: boolean;
 }
 
-const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save, mapId, readOnly = false}) => {
-    const [attributes, setAttributes] = useState<Record<string, string | number | boolean | Array<{ title: string; url: string }>>>(shape?.attributes || {});
+const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel, save, mapId, hasRole = false, readOnly = false}) => {
+    const [attributes, setAttributes] = useState<Record<string, string | number | boolean | Array<{ title: string; url: string }> | Array<{ operation: string; comment: string }>>>(shape?.attributes || {});
     const [comments, setComments] = useState<string>("");
     const [links, setLinks] = useState<Array<{ title: string; url: string }>>([]);
     const updateRecordMutation = useUpdateRecord();
@@ -37,7 +38,9 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
         const shapeLinks = shape?.attributes?.links;
         
         setComments(typeof shapeComments === 'string' ? shapeComments : "");
-        setLinks(Array.isArray(shapeLinks) ? shapeLinks : []);
+        // Solo cargar links si es un array con la estructura correcta (title, url)
+        const validLinks = Array.isArray(shapeLinks) && shapeLinks.length > 0 && 'title' in shapeLinks[0];
+        setLinks(validLinks ? shapeLinks as Array<{ title: string; url: string }> : []);
     }, [shape]);
 
     const handleSave = async () => {
@@ -110,8 +113,8 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
 
             {/* Scrollable attributes section */}
             <div className={"flex-1 flex flex-col gap-4 overflow-auto mb-4"}>
-                {/* Sección de Rol SII */}
-                {shape && (
+                {/* Sección de Rol SII - Solo si el mapa tiene hasRole */}
+                {shape && hasRole && (
                     <div className="flex-none bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <p className="text-sm font-semibold text-blue-900 mb-2">Rol SII</p>
                         <input
@@ -293,6 +296,26 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                                 )}
                             </div>
                         </div>
+                    </>
+                )}
+                
+                {/* Secciones específicas de rol - Solo si el mapa tiene hasRole */}
+                {shape && hasRole && (
+                    <>
+                        {/* Operaciones sobre el rol */}
+                        {attributes.operations && Array.isArray(attributes.operations) && attributes.operations.length > 0 && (
+                            <div className="flex-none bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                <p className="text-sm font-semibold text-amber-900 mb-2">Operaciones</p>
+                                <div className="space-y-2">
+                                    {(attributes.operations as Array<{ operation: string; comment: string }>).map((op, index) => (
+                                        <div key={index} className="bg-white p-2 rounded border border-amber-200">
+                                            <p className="text-xs font-semibold text-amber-800">{op.operation}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{op.comment || 'Sin comentario'}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Otros mapas con este rol */}
                         <div className="flex-none bg-green-50 p-3 rounded-lg border border-green-200">

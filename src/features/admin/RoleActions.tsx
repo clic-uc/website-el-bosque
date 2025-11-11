@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiPost } from '../../lib/api';
+import { apiClient } from '../../lib/api-client';
 import type { Roles } from '../../types/globals';
 import { ROLE_LABELS } from '../../auth/role';
 
@@ -22,7 +22,7 @@ export function RoleActions({ user, onChanged, onError }: RoleActionsProps) {
     if (pending) return;
     setPending(role);
     try {
-      await apiPost('/admin/users/set-role', { id: user.id, role });
+      await apiClient.post('/admin/users/set-role', { id: user.id, role });
       onChanged(role);
     } catch (error) {
       console.error('[Admin] Failed to update user role', error);
@@ -36,7 +36,7 @@ export function RoleActions({ user, onChanged, onError }: RoleActionsProps) {
     if (pending) return;
     setPending('remove');
     try {
-      await apiPost('/admin/users/remove-role', { id: user.id });
+      await apiClient.post('/admin/users/remove-role', { id: user.id });
       onChanged(null);
     } catch (error) {
       console.error('[Admin] Failed to remove user role', error);

@@ -46,6 +46,8 @@ export function transformBackendMapToFrontend(backendMap: MapEntity): Map {
     shapeType: "point", // Por defecto point, ajustar según el tipo de mapa
     shapes: [], // Inicialmente vacío, se cargarán los records después
     layers: [], // Inicialmente vacío, se pueden agregar capas dinámicamente
+    icon: backendMap.icon,
+    iconColor: backendMap.iconColor,
   };
 }
 

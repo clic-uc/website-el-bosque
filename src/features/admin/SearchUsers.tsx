@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { apiGet } from '../../lib/api';
+import { apiClient } from '../../lib/api-client';
 
 export type UserItem = {
   id: string;
@@ -35,10 +35,10 @@ export function SearchUsers({
     setLoading(true);
 
     try {
-      const { data } = await apiGet<{ data: UserItem[] }>(
+      const { data } = await apiClient.get<{ data: UserItem[] }>(
         `/admin/users?search=${encodeURIComponent(trimmed)}`,
       );
-      onResults(data);
+      onResults(data.data);
     } catch (error) {
       console.error('[Admin] Failed to search users', error);
       onError?.('No pudimos obtener los usuarios. Intenta nuevamente en unos segundos.');

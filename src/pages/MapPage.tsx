@@ -132,11 +132,16 @@ const MapPage = () => {
           // Filtrar comments y links de ra.attributes porque son campos del record, no atributos del mapa
           const { comments: _, links: __, ...mapAttributes } = (ra.attributes || {}) as Record<string, any>;
 
+          // Buscar el mapa para obtener icon e iconColor
+          const map = maps.find(m => m.id === ra.mapId);
+
           shapesByMap[ra.mapId].push({
             id: `record-${record.id}`,
             type: "point",
             layerId: ra.mapId.toString(),
             coordinates: [record.lat, record.lon],
+            icon: map?.icon,
+            iconColor: map?.iconColor,
             attributes: {
               recordId: record.id,
               recordAttributeId: ra.id,
@@ -144,6 +149,7 @@ const MapPage = () => {
               ...mapAttributes,  // Atributos del mapa (sin comments ni links)
               comments: record.comments || "",  // Comments del record
               links: record.links || [],  // Links del record
+              operations: record.role?.operations || [],  // Operaciones del rol
             },
           });
         });
@@ -151,7 +157,7 @@ const MapPage = () => {
     });
     
     return shapesByMap;
-  }, [recordsData]);
+  }, [recordsData, maps]);
 
   const handleToggleMap = (id: number) => {
     setActiveMaps((prev) =>
@@ -377,33 +383,33 @@ const MapPage = () => {
       />
       
       <div className="relative flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Botón para expandir sidebar cuando está colapsado */}
-        {isSidebarCollapsed && (
-          <button
-            onClick={() => setIsSidebarCollapsed(false)}
-            className="absolute top-4 left-4 z-[600] bg-white shadow-lg border-2 border-gray-300 rounded-lg p-2 transition-all hover:bg-gray-50 hover:border-gray-400"
-            title="Expandir barra lateral"
-          >
-            <svg 
-              className="h-5 w-5 text-gray-700"
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M9 5l7 7-7 7" 
-              />
-            </svg>
-          </button>
-        )}
         
         {/* Barra de búsqueda y botones superiores */}
         <div className="z-[500] flex items-center justify-between gap-3 border-b bg-white p-3 shadow-sm">
             {/* Lado izquierdo: Búsqueda y Filtros */}
             <div className="flex items-center gap-3 flex-1">
+              {/* Botón para expandir sidebar cuando está colapsado */}
+              {isSidebarCollapsed && (
+                <button
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="flex-shrink-0 p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-300"
+                  title="Expandir barra lateral"
+                >
+                  <svg 
+                    className="h-5 w-5"
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M9 5l7 7-7 7" 
+                    />
+                  </svg>
+                </button>
+              )}
               <SearchBar
                 shapes={allShapes}
                 onResultSelect={handleSearchResultSelect}
@@ -512,6 +518,7 @@ const MapPage = () => {
                 isLoading={recordsLoading}
                 mapId={firstActiveMapId}
                 searchTerm={tableSearchTerm}
+                hasRole={activeMap?.hasRole}
               />
             )}
             <FilterSideBar isOpen={isFilterOpen} mapId={firstActiveMapId} updateFilters={(newFilters) => setFilters(newFilters)} />
