@@ -6,7 +6,6 @@ import RecordsTable from "../components/table/RecordsTable.tsx";
 import { AnyShape } from "../types/Shape.tsx";
 import SideBar from "../components/map/SideBar.tsx";
 import SearchBar from "../components/map/SearchBar.tsx";
-import FeaturesAnnouncementModal from "../components/common/FeaturesAnnouncementModal.tsx";
 import { useEffect, useMemo, useState } from "react";
 import { useMaps } from "../hooks/useMaps";
 import { useRecords } from "../hooks/useRecords";
@@ -73,6 +72,7 @@ const MapPage = () => {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<Record<string, string | string[]>>({});
+  const [tableSearchTerm, setTableSearchTerm] = useState('');
 
   useEffect(() => {
     if (!canManageMaps) {
@@ -339,38 +339,7 @@ const MapPage = () => {
   }
 
   return (
-    <div className="flex flex-col w-screen h-screen overflow-hidden">
-      <header className="flex-shrink-0 bg-white border-b shadow-sm">
-        <div className="flex items-center justify-between px-6 py-3">
-          <h1 className="text-lg font-semibold text-gray-800">Panel de mapas</h1>
-          <div className="flex items-center gap-3">
-            <span className={`hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${roleBadgeClass}`}>
-              {roleLabel}
-            </span>
-            {isAdminRole && (
-              <Link
-                to="/admin"
-                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-              >
-                Panel de administración
-              </Link>
-            )}
-            <SignOutButton>
-              <button className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-                Cerrar sesión
-              </button>
-            </SignOutButton>
-            <UserButton />
-          </div>
-        </div>
-      </header>
-
-      <div className="relative flex flex-1 overflow-hidden">
-        {/* Modal de anuncios de features */}
-        <FeaturesAnnouncementModal
-          isOpen={isAnnouncementModalOpen}
-          onClose={() => setIsAnnouncementModalOpen(false)}
-        />
+    <div className="relative flex w-screen h-screen overflow-hidden">
         {canManageMaps && (
           <AddMapModal 
             isOpen={isAddMapModalOpen}
@@ -394,28 +363,29 @@ const MapPage = () => {
             onMapClickCancel={handleMapClickCancel}
           />
         )}
-        
-        <SideBar
-          maps={mapsForDisplay}
-          activeMaps={activeMaps}
-          onToggleMap={handleToggleMap}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          onAddMapClick={canManageMaps ? handleOpenAddMapModal : undefined}
-          onEditMapClick={canManageMaps ? handleOpenEditMapModal : undefined}
-          activePolygons={activePolygons}
-          onTogglePolygon={handleTogglePolygon}
-        />
-        
+      
+      <SideBar
+        maps={mapsForDisplay}
+        activeMaps={activeMaps}
+        onToggleMap={handleToggleMap}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onAddMapClick={canManageMaps ? handleOpenAddMapModal : undefined}
+        onEditMapClick={canManageMaps ? handleOpenEditMapModal : undefined}
+        activePolygons={activePolygons}
+        onTogglePolygon={handleTogglePolygon}
+      />
+      
+      <div className="relative flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Botón para expandir sidebar cuando está colapsado */}
         {isSidebarCollapsed && (
           <button
             onClick={() => setIsSidebarCollapsed(false)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-[1000] bg-white shadow-lg border border-gray-200 rounded-r-lg p-2 transition-colors hover:bg-gray-50"
+            className="absolute top-4 left-4 z-[600] bg-white shadow-lg border-2 border-gray-300 rounded-lg p-2 transition-all hover:bg-gray-50 hover:border-gray-400"
             title="Expandir barra lateral"
           >
             <svg 
-              className="h-5 w-5 text-gray-600" 
+              className="h-5 w-5 text-gray-700"
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -424,20 +394,22 @@ const MapPage = () => {
                 strokeLinecap="round" 
                 strokeLinejoin="round" 
                 strokeWidth={2} 
-                d="M13 5l7 7-7 7M5 5l7 7-7 7" 
+                d="M9 5l7 7-7 7" 
               />
             </svg>
           </button>
         )}
         
-        <div className="relative flex flex-1 flex-col min-w-0 overflow-hidden">
-          {/* Barra de búsqueda y botones superiores */}
-          <div className="z-[1500] flex items-center justify-between gap-3 border-b bg-white p-3 shadow-sm">
+        {/* Barra de búsqueda y botones superiores */}
+        <div className="z-[500] flex items-center justify-between gap-3 border-b bg-white p-3 shadow-sm">
             {/* Lado izquierdo: Búsqueda y Filtros */}
             <div className="flex items-center gap-3 flex-1">
               <SearchBar
                 shapes={allShapes}
                 onResultSelect={handleSearchResultSelect}
+                mode={viewMode}
+                onTableSearch={setTableSearchTerm}
+                tableSearchTerm={tableSearchTerm}
               />
               <button
                 onClick={() => setIsFilterOpen(prev => !prev)}
@@ -448,7 +420,7 @@ const MapPage = () => {
               </button>
             </div>
             
-            {/* Lado derecho: Botones de acciones */}
+            {/* Lado derecho: Botones de acciones y dropdown de usuario */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {canManageMaps && (
                 <button
@@ -471,6 +443,45 @@ const MapPage = () => {
               >
                 {viewMode === 'map' ? 'Ver en tabla' : 'Ver en mapa'}
               </button>
+              
+              {/* Dropdown de usuario */}
+              <div className="relative group">
+                <button className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                  <UserButton />
+                  <svg 
+                    className="w-4 h-4 text-gray-600 transition-transform group-hover:rotate-180" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Dropdown menu */}
+                <div className="absolute right-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[600]">
+                  <div className="p-3 space-y-2">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${roleBadgeClass}`}>
+                        {roleLabel}
+                      </span>
+                    </div>
+                    {isAdminRole && (
+                      <Link
+                        to="/admin"
+                        className="block w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 text-center"
+                      >
+                        Panel de administración
+                      </Link>
+                    )}
+                    <SignOutButton>
+                      <button className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                        Cerrar sesión
+                      </button>
+                    </SignOutButton>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -500,12 +511,12 @@ const MapPage = () => {
                   : (recordsData as unknown as { data?: GeographicalRecord[] })?.data ?? []}
                 isLoading={recordsLoading}
                 mapId={firstActiveMapId}
+                searchTerm={tableSearchTerm}
               />
             )}
             <FilterSideBar isOpen={isFilterOpen} mapId={firstActiveMapId} updateFilters={(newFilters) => setFilters(newFilters)} />
           </div>
         </div>
-      </div>
     </div>
   );
 };

@@ -1,22 +1,26 @@
 import { useMemo, useState } from 'react';
+import { useDeleteRecord } from '../../hooks/useRecords';
 import type { GeographicalRecord } from '../../types/api.types';
 
 interface RecordsTableProps {
   records: GeographicalRecord[];
   isLoading?: boolean;
   mapId?: number;
+  searchTerm?: string;
 }
 
-const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
+const RecordsTable = ({ records, isLoading, mapId, searchTerm = '' }: RecordsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [searchTerm, setSearchTerm] = useState('');
   
   // Estado para celdas en edición: { recordId: { columnName: value } }
   const [editingCells, setEditingCells] = useState<Record<number, Record<string, string>>>({});
   
   // Estado para tracking qué filas están siendo editadas
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
+
+  // Hook para eliminar registro
+  const deleteRecordMutation = useDeleteRecord();
 
   // Filtrar records por búsqueda
   const filteredRecords = useMemo(() => {
@@ -137,6 +141,20 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
     setEditingRows(newEditingRows);
   };
 
+  const deleteRecord = (recordId: number) => {
+    if (confirm(`¿Estás seguro de que quieres eliminar el registro ${recordId}?`)) {
+      deleteRecordMutation.mutate(recordId, {
+        onSuccess: () => {
+          console.log('✅ Registro eliminado exitosamente');
+        },
+        onError: (error) => {
+          console.error('❌ Error al eliminar registro:', error);
+          alert('Error al eliminar el registro. Por favor, intenta de nuevo.');
+        }
+      });
+    }
+  };
+
   const isRowEditing = (recordId: number) => editingRows.has(recordId);
   
   const getCellValue = (recordId: number, columnName: string, originalValue: string) => {
@@ -168,52 +186,11 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
 
   return (
     <div className="flex flex-col h-full w-full bg-white overflow-hidden">
-      {/* Header con búsqueda y controles */}
-      <div className="flex-shrink-0 p-4 border-b bg-gray-50">
-        <div className="flex items-center justify-between gap-4">
-          {/* Búsqueda */}
-          <div className="flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Buscar en la tabla..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset a primera página al buscar
-              }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Info y controles */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {filteredRecords.length} registro{filteredRecords.length !== 1 ? 's' : ''}
-              {searchTerm && ` (filtrado${filteredRecords.length !== records.length ? ` de ${records.length}` : ''})`}
-            </span>
-            
-            <select
-              value={itemsPerPage}
-              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={25}>25 por página</option>
-              <option value={50}>50 por página</option>
-              <option value={100}>100 por página</option>
-              <option value={200}>200 por página</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Tabla con scroll vertical y horizontal */}
       <div className="flex-1 min-h-0 overflow-auto w-full">
         <table className="border-collapse table-auto">
           <thead className="bg-gray-100 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap">
-                ID
-              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap">
                 Rol SII
               </th>
@@ -231,7 +208,6 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
                   {col}
                 </th>
               ))}
-              {/* Columna de acciones */}
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap sticky right-0 bg-gray-100">
                 Acciones
               </th>
@@ -247,10 +223,6 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
                   key={record.id}
                   className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'} ${editing ? 'bg-blue-50' : ''}`}
                 >
-                  <td className="px-4 py-3 text-sm text-gray-900 border-b whitespace-nowrap">
-                    {record.id}
-                  </td>
-                  
                   {/* Rol SII - Editable */}
                   <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
                     {editing ? (
@@ -347,23 +319,31 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
                           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
                           title="Guardar cambios"
                         >
-                          ✓ Guardar
+                          Guardar
                         </button>
                         <button
                           onClick={() => revertRowChanges(record.id)}
                           className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
                           title="Cancelar cambios"
                         >
-                          ✕ Cancelar
+                          Cancelar
                         </button>
                       </div>
                     ) : (
-                      <div className="flex justify-center">
+                      <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
                           className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium rounded transition-colors"
+                          title="Editar registro"
                         >
-                          ✎ Editar
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => deleteRecord(record.id)}
+                          className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded transition-colors"
+                          title="Eliminar registro"
+                        >
+                          Eliminar
                         </button>
                       </div>
                     )}
@@ -375,47 +355,60 @@ const RecordsTable = ({ records, isLoading, mapId }: RecordsTableProps) => {
         </table>
       </div>
 
-      {/* Footer con paginación */}
+      {/* Footer con paginación y controles */}
       <div className="flex-shrink-0 p-4 border-t bg-gray-50">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
             Mostrando {startIndex + 1} - {Math.min(endIndex, filteredRecords.length)} de {filteredRecords.length}
           </div>
           
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(1)}
-              disabled={currentPage === 1}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          <div className="flex items-center gap-3">
+            <select
+              value={itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              Primera
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
+              <option value={25}>25 por página</option>
+              <option value={50}>50 por página</option>
+              <option value={100}>100 por página</option>
+              <option value={200}>200 por página</option>
+            </select>
             
-            <span className="px-4 py-1 text-sm">
-              Página {currentPage} de {totalPages || 1}
-            </span>
-            
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Siguiente
-            </button>
-            <button
-              onClick={() => handlePageChange(totalPages)}
-              disabled={currentPage >= totalPages}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Última
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Primera
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              
+              <span className="px-4 py-1 text-sm">
+                Página {currentPage} de {totalPages || 1}
+              </span>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Última
+              </button>
+            </div>
           </div>
         </div>
       </div>

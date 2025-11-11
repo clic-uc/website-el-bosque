@@ -92,7 +92,7 @@ const AddMapModal: React.FC<AddMapModalProps> = ({
               disabled={createMapMutation.isPending}
               required
             >
-              <option value="">-- Selecciona un departamento --</option>
+              <option value="">Selecciona un departamento</option>
               {Object.keys(groupedMaps).map((dept) => {
                 const capitalizedDept = dept.charAt(0).toUpperCase() + dept.slice(1);
                 return (

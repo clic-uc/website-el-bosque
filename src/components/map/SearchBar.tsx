@@ -1,19 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnyShape } from "../../types/Shape";
 
 interface SearchBarProps {
-  shapes: AnyShape[];
-  onResultSelect: (shape: AnyShape) => void;
+  shapes?: AnyShape[];
+  onResultSelect?: (shape: AnyShape) => void;
+  // Props para modo tabla
+  mode?: 'map' | 'table';
+  onTableSearch?: (searchTerm: string) => void;
+  tableSearchTerm?: string;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ 
+  shapes = [], 
+  onResultSelect,
+  mode = 'map',
+  onTableSearch,
+  tableSearchTerm = ''
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<AnyShape[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
+  // Sincronizar con el término de búsqueda de tabla cuando cambia desde fuera
+  useEffect(() => {
+    if (mode === 'table' && tableSearchTerm !== searchTerm) {
+      setSearchTerm(tableSearchTerm);
+    }
+  }, [mode, tableSearchTerm, searchTerm]);
+
   const handleSearch = (value: string) => {
     setSearchTerm(value);
 
+    if (mode === 'table') {
+      // Modo tabla: solo actualizar el término de búsqueda, sin dropdown
+      onTableSearch?.(value);
+      return;
+    }
+
+    // Modo mapa: búsqueda con dropdown de resultados
     if (!value.trim()) {
       setSearchResults([]);
       setIsOpen(false);
@@ -32,7 +56,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
   };
 
   const handleSelectResult = (shape: AnyShape) => {
-    onResultSelect(shape);
+    onResultSelect?.(shape);
     setSearchTerm("");
     setSearchResults([]);
     setIsOpen(false);
@@ -45,7 +69,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
           type="text"
           value={searchTerm}
           onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Buscar por Rol (ej: 12345-67890)..."
+          placeholder={mode === 'table' ? "Buscar en la tabla..." : "Buscar por Rol (ej: 12345-67890)..."}
           className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         {searchTerm && (
@@ -54,6 +78,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
               setSearchTerm("");
               setSearchResults([]);
               setIsOpen(false);
+              if (mode === 'table') {
+                onTableSearch?.('');
+              }
             }}
             className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
@@ -62,8 +89,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
         )}
       </div>
 
-      {/* Dropdown de resultados */}
-      {isOpen && searchResults.length > 0 && (
+      {/* Dropdown de resultados - solo en modo mapa */}
+      {mode === 'map' && isOpen && searchResults.length > 0 && (
         <div className="absolute z-[2000] w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
           {searchResults.map((shape) => {
             const roleId = shape.attributes?.["Rol SII"] as string;
@@ -78,7 +105,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
               >
                 <div className="font-semibold text-gray-800">{roleId}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  Record ID: {recordId}
+                  Record ID: {String(recordId)}
                 </div>
                 {coords && (
                   <div className="text-xs text-gray-400 mt-1">
@@ -91,8 +118,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ shapes, onResultSelect }) => {
         </div>
       )}
 
-      {/* Mensaje cuando no hay resultados */}
-      {isOpen && searchResults.length === 0 && searchTerm.trim() && (
+      {/* Mensaje cuando no hay resultados - solo en modo mapa */}
+      {mode === 'map' && isOpen && searchResults.length === 0 && searchTerm.trim() && (
         <div className="absolute z-[2000] w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500">
           No se encontraron resultados para "{searchTerm}"
         </div>

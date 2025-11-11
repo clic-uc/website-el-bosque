@@ -59,22 +59,23 @@ const SideBar: React.FC<SideBarProps> = ({
     };
 
     return (
-        <div className={`flex-shrink-0 h-full bg-white shadow-md border-r flex flex-col transition-all duration-300 ${
+        <div className={`flex-shrink-0 h-full bg-white shadow-md border-r flex flex-col transition-all duration-300 z-[100] ${
             isCollapsed ? 'w-0 overflow-hidden' : 'w-80'
         }`}>
             {!isCollapsed && (
-                <div className="p-4 flex flex-col gap-4 overflow-y-auto h-full">
-                    <div className="flex-shrink-0">
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-lg font-bold">Departamentos y Mapas</h2>
-                            <div className="flex items-center">
+                <>
+                    {/* Header fijo con botón de colapsar */}
+                    <div className="flex-shrink-0 border-b bg-white shadow-sm">
+                        <div className="flex items-center justify-between px-4 py-2">
+                            <h2 className="text-base font-bold text-gray-800">Mapas</h2>
+                            <div className="flex items-center gap-2">
                                 {onAddMapClick && (
                                     <button
                                         onClick={onAddMapClick}
-                                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
                                         title="Añadir mapa"
                                     >
-                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
                                         </svg>
                                     </button>
@@ -82,26 +83,20 @@ const SideBar: React.FC<SideBarProps> = ({
                                 {onToggleCollapse && (
                                     <button
                                         onClick={onToggleCollapse}
-                                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
                                         title="Colapsar barra lateral"
                                     >
-                                        <svg 
-                                            className="w-5 h-5 text-gray-600" 
-                                            fill="none" 
-                                            stroke="currentColor" 
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path 
-                                                strokeLinecap="round" 
-                                                strokeLinejoin="round" 
-                                                strokeWidth={2} 
-                                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7" 
-                                            />
+                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                         </svg>
                                     </button>
                                 )}
                             </div>
                         </div>
+                    </div>
+                    
+                    {/* Contenido scrollable */}
+                    <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
                         <div className="flex flex-col gap-2">
                             {Object.keys(groupedMaps).map((department) => (
                                 <div key={department} className="flex flex-col mb-2">
@@ -159,10 +154,9 @@ const SideBar: React.FC<SideBarProps> = ({
                                 </div>
                             ))}
                         </div>
-                    </div>
 
-                    {/* Sección de Polígonos */}
-                    <div className="flex-shrink-0 border-t pt-4">
+                        {/* Sección de Polígonos */}
+                        <div className="flex-shrink-0 border-t pt-4">
                         <div 
                             className="flex items-center gap-2 cursor-pointer hover:bg-purple-50 p-2 rounded select-none bg-purple-100 mb-2"
                             onClick={() => setShowPolygons(!showPolygons)}
@@ -221,7 +215,8 @@ const SideBar: React.FC<SideBarProps> = ({
                             </div>
                         )}
                     </div>
-                </div>
+                    </div>
+                </>
             )}
         </div>
     )
