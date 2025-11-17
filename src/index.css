@@ -13,13 +13,23 @@
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  /* Quitar overflow global para permitir scroll en vistas administrativas */
 }
 
 #root {
   width: 100vw;
   height: 100vh;
+  /* Scroll controlado por vistas específicas */
+}
+
+/* Solo la página del mapa debe ocultar el scroll */
+body.map-view {
   overflow: hidden;
+}
+
+#root.map-view {
+  overflow: hidden;
+  height: 100vh; /* asegurar altura completa cuando se oculta scroll */
 }
 
 .leaflet-container { 

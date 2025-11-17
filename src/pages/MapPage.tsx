@@ -20,6 +20,16 @@ import FilterSideBar from "../components/map/FilterSideBar.tsx";
 import { LuFilter } from "react-icons/lu";
 
 const MapPage = () => {
+  // Activar clase para impedir scroll solo en la vista de mapa
+  useEffect(() => {
+    document.body.classList.add('map-view');
+    const root = document.getElementById('root');
+    root?.classList.add('map-view');
+    return () => {
+      document.body.classList.remove('map-view');
+      root?.classList.remove('map-view');
+    };
+  }, []);
   // Fetch maps from backend
   const { data: backendMaps, isLoading: mapsLoading, error: mapsError } = useMaps();
   const role = useCurrentRole();
@@ -453,7 +463,14 @@ const MapPage = () => {
               {/* Dropdown de usuario */}
               <div className="relative group">
                 <button className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
-                  <UserButton />
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        userButtonPopoverCard: { display: 'none' },
+                        userButtonTrigger: { '&:focus': { boxShadow: 'none' } }
+                      }
+                    }}
+                  />
                   <svg 
                     className="w-4 h-4 text-gray-600 transition-transform group-hover:rotate-180" 
                     fill="none" 
@@ -480,6 +497,12 @@ const MapPage = () => {
                         Panel de administración
                       </Link>
                     )}
+                    <button
+                      onClick={() => window.open('https://accounts.clerk.com/user', '_blank')}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 text-center"
+                    >
+                      Administrar cuenta
+                    </button>
                     <SignOutButton>
                       <button className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                         Cerrar sesión
