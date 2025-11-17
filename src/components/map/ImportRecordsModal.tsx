@@ -8,6 +8,7 @@ interface ImportRecordsModalProps {
   maps: Map[];
   isOpen: boolean;
   onClose: () => void;
+  fixedMapId?: number; // Si se provee, el modal estará bloqueado a ese mapa
 }
 
 const mapCsv = async (file: File, delimiter = ';', length: number = 20) => {
@@ -23,7 +24,7 @@ const mapCsv = async (file: File, delimiter = ';', length: number = 20) => {
     return { headers, rows, total, rowsText };
 }
 
-const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, onClose }) => {
+const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, onClose, fixedMapId }) => {
   const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -31,6 +32,13 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
   const [headerMappings, setHeaderMappings] = useState<Record<string, string | null>>({});
   const [parsedCsv, setParsedCsv] = useState<{ headers: string[]; rows: string[][]; total: number, rowsText: string } | null>(null);
   const [delimiter, setDelimiter] = useState<string>(',');
+
+  // Forzar el mapa seleccionado cuando se indique uno fijo
+  useEffect(() => {
+    if (fixedMapId) {
+      setSelectedMapId(fixedMapId);
+    }
+  }, [fixedMapId, isOpen]);
 
   useEffect(() => {
       if (!selectedFile || !selectedMapId) return;
@@ -135,27 +143,29 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Selector de Mapa */}
-          <div>
-            <label htmlFor="map-select" className="block text-sm font-medium text-gray-700 mb-2">
-              Seleccionar Mapa
-            </label>
-            <select
-              id="map-select"
-              value={selectedMapId ?? ''}
-              onChange={(e) => setSelectedMapId(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isPending}
-              required
-            >
-              <option value="">Selecciona un mapa</option>
-              {maps.map((map) => (
-                <option key={map.id} value={map.id}>
-                  {map.name} ({map.department})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Selector de Mapa (oculto si viene fijo) */}
+          {!fixedMapId && (
+            <div>
+              <label htmlFor="map-select" className="block text-sm font-medium text-gray-700 mb-2">
+                Seleccionar Mapa
+              </label>
+              <select
+                id="map-select"
+                value={selectedMapId ?? ''}
+                onChange={(e) => setSelectedMapId(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isPending}
+                required
+              >
+                <option value="">Selecciona un mapa</option>
+                {maps.map((map) => (
+                  <option key={map.id} value={map.id}>
+                    {map.name} ({map.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Selector de Archivo */}
           <div>

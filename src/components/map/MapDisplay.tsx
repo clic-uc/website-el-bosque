@@ -111,7 +111,6 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     const queryClient = useQueryClient();
 
     const [selectedShape, setSelectedShape] = useState<AnyShape | null>(null);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [coordinateModalState, setCoordinateModalState] = useState<{
         isOpen: boolean;
         recordId: number;
@@ -125,11 +124,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
     // (por ejemplo, cuando está en un cluster durante zoom)
     const selectedShapeCache = useRef<AnyShape | null>(null);
     
-    useEffect(() => {
-        if (!canImport && isImportModalOpen) {
-            setIsImportModalOpen(false);
-        }
-    }, [canImport, isImportModalOpen]);
+    // Importación movida al modal de edición de mapa
     
     // Actualizar caché cuando selectedShape cambia
     useEffect(() => {
@@ -603,33 +598,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 hasRole={activeMap.hasRole}
             />
             
-            {/* Botón flotante para importar records */}
-            {canImport && (
-                <button
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="absolute bottom-6 left-6 z-[1000] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg shadow-lg transition-colors flex items-center space-x-2"
-                    title="Importar registros desde CSV"
-                >
-                    <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className="h-5 w-5" 
-                        viewBox="0 0 20 20" 
-                        fill="currentColor"
-                    >
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Importar CSV</span>
-                </button>
-            )}
-
-            {/* Modal de importación */}
-            {canImport && (
-                <ImportRecordsModal
-                    maps={maps}
-                    isOpen={isImportModalOpen}
-                    onClose={() => setIsImportModalOpen(false)}
-                />
-            )}
+            {/* Importar CSV ahora disponible dentro de EditMapModal */}
 
             {/* Modal de confirmación de cambio de coordenadas */}
             {coordinateModalState && (
