@@ -150,11 +150,22 @@ export default function AdminDashboard() {
   const fetchLogs = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get<{ data: AuditLog[]; total: number }>(
-        `/audit/logs?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`
+      const resp = await apiClient.get(
+        `/audit/logs`,
+        { params: { limit: PAGE_SIZE, offset: page * PAGE_SIZE } }
       );
-      setLogs(data.data);
-      setTotalLogs(data.total);
+      const payload = resp.data as unknown;
+      if (Array.isArray(payload)) {
+        setLogs(payload as AuditLog[]);
+        setTotalLogs((payload as AuditLog[]).length);
+      } else if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
+        const p = payload as { data: AuditLog[]; total?: number };
+        setLogs(p.data ?? []);
+        setTotalLogs(p.total ?? (p.data?.length ?? 0));
+      } else {
+        setLogs([]);
+        setTotalLogs(0);
+      }
     } catch (error) {
       console.error('[Audit] Failed to fetch logs', error);
       setFeedback({
@@ -169,11 +180,22 @@ export default function AdminDashboard() {
   const fetchImports = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get<{ data: ImportBatch[]; total: number }>(
-        `/audit/imports?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`
+      const resp = await apiClient.get(
+        `/audit/imports`,
+        { params: { limit: PAGE_SIZE, offset: page * PAGE_SIZE } }
       );
-      setImports(data.data);
-      setTotalImports(data.total);
+      const payload = resp.data as unknown;
+      if (Array.isArray(payload)) {
+        setImports(payload as ImportBatch[]);
+        setTotalImports((payload as ImportBatch[]).length);
+      } else if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
+        const p = payload as { data: ImportBatch[]; total?: number };
+        setImports(p.data ?? []);
+        setTotalImports(p.total ?? (p.data?.length ?? 0));
+      } else {
+        setImports([]);
+        setTotalImports(0);
+      }
     } catch (error) {
       console.error('[Audit] Failed to fetch imports', error);
       setFeedback({
