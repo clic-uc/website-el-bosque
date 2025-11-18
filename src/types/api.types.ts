@@ -159,11 +159,18 @@ export interface PaginatedRecordsParams extends Omit<RecordsQueryParams, 'page' 
 // }
 
 // Import/Bulk
+export interface BulkImportError {
+  row: number;
+  message: string;
+}
+
 export interface BulkImportSummary {
   totalRows: number;
   succeeded: number;
   failed: number;
-  errors: string[];
+  errors: BulkImportError[];
+  /** CSV con las filas que fallaron (opcional) */
+  failedRowsCsv?: string;
 }
 
 export interface SeedSummary {

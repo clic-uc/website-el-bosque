@@ -1,12 +1,13 @@
 // src/components/map/EditMapModal.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMap, useUpdateMap, useDeleteMap } from '../../hooks/useMaps.ts';
 import { Department, type UpdateMapDto } from '../../types/api.types.ts';
-import { getDepartmentLabel } from '../../utils/mapTransformers.ts';
+import { getDepartmentLabel, transformBackendMapToFrontend } from '../../utils/mapTransformers.ts';
 import { Palette } from 'lucide-react';
 import IconPicker from '../common/IconPicker';
 import IconRenderer from '../common/IconRenderer';
+import ImportRecordsModal from './ImportRecordsModal';
 
 interface EditMapModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
   const [icon, setIcon] = useState<string>('building-2');
   const [iconColor, setIconColor] = useState<string>('#6b7280');
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
+  const [isImportOpen, setIsImportOpen] = useState<boolean>(false);
 
   const { data: map, isLoading: isLoadingMap } = useMap(mapId);
   const updateMapMutation = useUpdateMap();
@@ -89,6 +91,11 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
       });
     }
   };
+
+  const importMaps = useMemo(() => {
+    if (!map) return [] as Array<ReturnType<typeof transformBackendMapToFrontend>>;
+    return [transformBackendMapToFrontend(map)];
+  }, [map]);
 
   if (!isOpen) return null;
 
@@ -212,6 +219,22 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
               </div>
             </div>
 
+            {/* Importar Registros */}
+            <div className="pt-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Importar registros
+              </label>
+              <p className="text-sm text-gray-600 mb-2">Carga un archivo CSV y mapea sus columnas a los atributos de este mapa.</p>
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(true)}
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={updateMapMutation.isPending || deleteMapMutation.isPending || !mapId}
+              >
+                Importar CSV
+              </button>
+            </div>
+
             {/* Botones */}
             <div className="flex justify-between items-center pt-2">
               {/* Botón de Eliminar a la izquierda */}
@@ -259,6 +282,16 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
         currentIcon={icon}
         currentColor={iconColor}
       />
+
+      {/* Modal de importación de registros (bloqueado a este mapa) */}
+      {isImportOpen && mapId && (
+        <ImportRecordsModal
+          maps={importMaps as any}
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          fixedMapId={mapId}
+        />
+      )}
     </div>
   );
 };

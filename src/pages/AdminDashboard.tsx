@@ -9,6 +9,29 @@ import { apiClient } from '../lib/api-client';
 
 type Feedback = { type: 'info' | 'error'; message: string };
 
+type AuditLog = {
+  id: string;
+  userId: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'IMPORT' | 'REVERT';
+  entityType: 'MAP' | 'RECORD' | 'ROLE' | 'RECORD_ATTRIBUTE';
+  entityId: string;
+  timestamp: string;
+  metadata: Record<string, any>;
+};
+
+type ImportBatch = {
+  id: string;
+  mapId: number;
+  userId: string;
+  fileName: string;
+  totalRecords: number;
+  succeededRecords: number;
+  failedRecords: number;
+  status: 'COMPLETED' | 'REVERTED';
+  importedAt: string;
+  revertedAt?: string;
+};
+
 type RosterResponse = {
   data: UserItem[];
   meta?: {
@@ -32,15 +55,46 @@ type PaginationState = {
 
 const PAGE_SIZE = 20;
 
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: 'Creación',
+  UPDATE: 'Actualización',
+  DELETE: 'Eliminación',
+  IMPORT: 'Importación',
+  REVERT: 'Reversión',
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  MAP: 'Mapa',
+  RECORD: 'Registro',
+  ROLE: 'Rol',
+  RECORD_ATTRIBUTE: 'Atributo',
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  CREATE: 'bg-green-50 border-green-200 text-green-700',
+  UPDATE: 'bg-blue-50 border-blue-200 text-blue-700',
+  DELETE: 'bg-red-50 border-red-200 text-red-700',
+  IMPORT: 'bg-purple-50 border-purple-200 text-purple-700',
+  REVERT: 'bg-orange-50 border-orange-200 text-orange-700',
+};
+
 export default function AdminDashboard() {
-  const { isLoaded } = useUser();
+  const { isLoaded, user } = useUser();
   const role = useCurrentRole();
+  const [activeTab, setActiveTab] = useState<'users' | 'audit'>('users');
+  const [auditView, setAuditView] = useState<'logs' | 'imports'>('logs');
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [imports, setImports] = useState<ImportBatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [pagination, setPagination] = useState<PaginationState | null>(null);
   const [viewState, setViewState] = useState<'roster' | 'search'>('roster');
   const [searchSession, setSearchSession] = useState(0);
+  const [logsPage, setLogsPage] = useState(0);
+  const [importsPage, setImportsPage] = useState(0);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [totalImports, setTotalImports] = useState(0);
 
   const fetchRoster = useCallback(async (requestedOffset = 0) => {
     setLoading(true);
@@ -93,9 +147,101 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const fetchLogs = useCallback(async (page: number) => {
+    setLoading(true);
+    try {
+      const resp = await apiClient.get(
+        `/audit/logs`,
+        { params: { limit: PAGE_SIZE, offset: page * PAGE_SIZE } }
+      );
+      const payload = resp.data as unknown;
+      if (Array.isArray(payload)) {
+        setLogs(payload as AuditLog[]);
+        setTotalLogs((payload as AuditLog[]).length);
+      } else if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
+        const p = payload as { data: AuditLog[]; total?: number };
+        setLogs(p.data ?? []);
+        setTotalLogs(p.total ?? (p.data?.length ?? 0));
+      } else {
+        setLogs([]);
+        setTotalLogs(0);
+      }
+    } catch (error) {
+      console.error('[Audit] Failed to fetch logs', error);
+      setFeedback({
+        type: 'error',
+        message: 'No se pudieron cargar los logs de auditoría.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchImports = useCallback(async (page: number) => {
+    setLoading(true);
+    try {
+      const resp = await apiClient.get(
+        `/audit/imports`,
+        { params: { limit: PAGE_SIZE, offset: page * PAGE_SIZE } }
+      );
+      const payload = resp.data as unknown;
+      if (Array.isArray(payload)) {
+        setImports(payload as ImportBatch[]);
+        setTotalImports((payload as ImportBatch[]).length);
+      } else if (payload && typeof payload === 'object' && 'data' in (payload as any)) {
+        const p = payload as { data: ImportBatch[]; total?: number };
+        setImports(p.data ?? []);
+        setTotalImports(p.total ?? (p.data?.length ?? 0));
+      } else {
+        setImports([]);
+        setTotalImports(0);
+      }
+    } catch (error) {
+      console.error('[Audit] Failed to fetch imports', error);
+      setFeedback({
+        type: 'error',
+        message: 'No se pudieron cargar las importaciones.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleRevertImport = async (batchId: string) => {
+    if (!confirm('¿Estás seguro de que quieres revertir esta importación? Esta acción eliminará todos los registros importados.')) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/audit/imports/${batchId}`);
+      await fetchImports(importsPage);
+      setFeedback({
+        type: 'info',
+        message: 'Importación revertida exitosamente.',
+      });
+    } catch (error) {
+      console.error('[Audit] Failed to revert import', error);
+      setFeedback({
+        type: 'error',
+        message: 'Error al revertir la importación.',
+      });
+    }
+  };
+
   useEffect(() => {
-    void fetchRoster(0);
-  }, [fetchRoster]);
+    // Opción B: no ejecutar peticiones hasta que Clerk esté cargado
+    if (!isLoaded) return;
+    setFeedback(null);
+    if (activeTab === 'users') {
+      void fetchRoster(0);
+    } else if (activeTab === 'audit') {
+      if (auditView === 'logs') {
+        void fetchLogs(logsPage);
+      } else {
+        void fetchImports(importsPage);
+      }
+    }
+  }, [isLoaded, activeTab, auditView, logsPage, importsPage, fetchRoster, fetchLogs, fetchImports]);
 
   const handleRoleChange = (userId: string, nextRole: Roles | null) => {
     setUsers((prev) =>
@@ -143,7 +289,34 @@ export default function AdminDashboard() {
   const showingStart = offset + 1;
   const showingEnd = offset + users.length;
 
-  if (!isLoaded) return null;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('es-CL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const auditTotalPages = auditView === 'logs' 
+    ? Math.ceil(totalLogs / PAGE_SIZE)
+    : Math.ceil(totalImports / PAGE_SIZE);
+  
+  const auditCurrentPage = auditView === 'logs' ? logsPage : importsPage;
+  const setAuditCurrentPage = auditView === 'logs' ? setLogsPage : setImportsPage;
+
+  // Esperar a que Clerk cargue completamente el usuario y su rol
+  if (!isLoaded || (user && role === null)) {
+    return (
+      <main className="flex min-h-screen w-screen items-center justify-center bg-slate-100 px-4">
+        <div className="text-center">
+          <p className="text-lg text-gray-700">Cargando...</p>
+          <p className="text-sm text-gray-500 mt-2">Verificando permisos...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -175,9 +348,9 @@ export default function AdminDashboard() {
             </section>
           </main>
         ) : (
-          <main className="min-h-screen w-screen bg-slate-100 text-slate-900">
-            <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-12 lg:px-8">
-              <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <main className="min-h-screen w-screen bg-slate-100 text-slate-900 overflow-y-auto">
+            <div className="mx-auto flex max-w-5xl flex-col px-6 py-12 pb-12 lg:px-8">
+              <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
                     Municipalidad de El Bosque
@@ -186,8 +359,9 @@ export default function AdminDashboard() {
                     Panel de administración
                   </h1>
                   <p className="text-sm text-slate-600">
-                    Gestiona los roles de los equipos vinculados al portal
-                    territorial.
+                    {activeTab === 'users' 
+                      ? 'Gestiona los roles de los equipos vinculados al portal territorial.'
+                      : 'Visualiza todas las acciones realizadas en el sistema.'}
                   </p>
                 </div>
                 <Link
@@ -198,6 +372,32 @@ export default function AdminDashboard() {
                 </Link>
               </header>
 
+              {/* Tabs principales */}
+              <div className="mb-6 flex gap-2 border-b border-slate-200">
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === 'users'
+                      ? 'border-b-2 border-blue-600 text-blue-600'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Gestión de usuarios
+                </button>
+                <button
+                  onClick={() => setActiveTab('audit')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === 'audit'
+                      ? 'border-b-2 border-blue-600 text-blue-600'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Auditoría
+                </button>
+              </div>
+
+              {activeTab === 'users' && (
+              <>
               <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-lg">
                 <div className="flex flex-col gap-6">
                   <div>
@@ -350,6 +550,173 @@ export default function AdminDashboard() {
                   </footer>
                 ) : null}
               </section>
+              </>
+              )}
+
+              {/* Vista de Auditoría */}
+              {activeTab === 'audit' && (
+                <div className="space-y-6">
+                  {/* Sub-tabs de auditoría */}
+                  <div className="flex gap-2 border-b border-slate-200">
+                    <button
+                      onClick={() => setAuditView('logs')}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        auditView === 'logs'
+                          ? 'border-b-2 border-blue-600 text-blue-600'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Logs de auditoría
+                    </button>
+                    <button
+                      onClick={() => setAuditView('imports')}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        auditView === 'imports'
+                          ? 'border-b-2 border-blue-600 text-blue-600'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Importaciones
+                    </button>
+                  </div>
+
+                  {loading ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 text-sm text-slate-500 shadow-sm">
+                      Cargando...
+                    </div>
+                  ) : null}
+
+                  {/* Logs Tab */}
+                  {auditView === 'logs' && !loading && (
+                    <div className="space-y-4">
+                      {!logs || logs.length === 0 ? (
+                        <p className="text-sm text-slate-500">
+                          No hay logs de auditoría disponibles.
+                        </p>
+                      ) : (
+                        logs.map((log) => (
+                          <article
+                            key={log.id}
+                            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                          >
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${ACTION_COLORS[log.action]}`}>
+                                  {ACTION_LABELS[log.action]}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  {ENTITY_LABELS[log.entityType]} #{log.entityId}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-600">
+                                Usuario: <span className="font-mono text-xs">{log.userId}</span>
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {formatDate(log.timestamp)}
+                              </p>
+                              {log.metadata && Object.keys(log.metadata).length > 0 && (
+                                <details className="mt-2">
+                                  <summary className="cursor-pointer text-xs font-medium text-blue-600 hover:text-blue-700">
+                                    Ver detalles
+                                  </summary>
+                                  <pre className="mt-2 rounded-lg bg-slate-50 p-3 text-xs overflow-x-auto">
+                                    {JSON.stringify(log.metadata, null, 2)}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Imports Tab */}
+                  {auditView === 'imports' && !loading && (
+                    <div className="space-y-4">
+                      {!imports || imports.length === 0 ? (
+                        <p className="text-sm text-slate-500">
+                          No hay importaciones registradas.
+                        </p>
+                      ) : (
+                        imports.map((batch) => (
+                          <article
+                            key={batch.id}
+                            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                          >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-base font-semibold text-slate-900">
+                                    {batch.fileName}
+                                  </h3>
+                                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${
+                                    batch.status === 'COMPLETED'
+                                      ? 'bg-green-50 border-green-200 text-green-700'
+                                      : 'bg-red-50 border-red-200 text-red-700'
+                                  }`}>
+                                    {batch.status === 'COMPLETED' ? 'Completada' : 'Revertida'}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm text-slate-600">
+                                  <p>Mapa ID: {batch.mapId}</p>
+                                  <p>Total: {batch.totalRecords} registros</p>
+                                  <p>Exitosos: {batch.succeededRecords}</p>
+                                  <p>Fallidos: {batch.failedRecords}</p>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2">
+                                  Importado: {formatDate(batch.importedAt)}
+                                </p>
+                                {batch.revertedAt && (
+                                  <p className="text-xs text-red-600 mt-1">
+                                    Revertido: {formatDate(batch.revertedAt)}
+                                  </p>
+                                )}
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Usuario: <span className="font-mono">{batch.userId}</span>
+                                </p>
+                              </div>
+                              {batch.status === 'COMPLETED' && (
+                                <button
+                                  onClick={() => handleRevertImport(batch.id)}
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+                                >
+                                  Revertir importación
+                                </button>
+                              )}
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Paginación de auditoría */}
+                  {!loading && ((auditView === 'logs' && logs && logs.length > 0) || (auditView === 'imports' && imports && imports.length > 0)) && (
+                    <footer className="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm">
+                      <div>
+                        Página {auditCurrentPage + 1} de {auditTotalPages}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setAuditCurrentPage(Math.max(0, auditCurrentPage - 1))}
+                          disabled={auditCurrentPage === 0}
+                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-blue-300 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Anterior
+                        </button>
+                        <button
+                          onClick={() => setAuditCurrentPage(auditCurrentPage + 1)}
+                          disabled={auditCurrentPage >= auditTotalPages - 1}
+                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-blue-300 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    </footer>
+                  )}
+                </div>
+              )}
             </div>
           </main>
         )}

@@ -69,17 +69,6 @@ export function RoleActions({ user, onChanged, onError }: RoleActionsProps) {
          </button>
        );
      })}
-      <button
-        type="button"
-        onClick={removeRole}
-        disabled={pending !== null || !currentRole}
-        className={[
-          BUTTON_BASE,
-          'border-red-200 bg-white text-red-600 hover:bg-red-50',
-        ].join(' ')}
-      >
-        {pending === 'remove' ? 'Quitando...' : 'Quitar rol'}
-      </button>
     </div>
   );
 }

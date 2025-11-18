@@ -6,8 +6,8 @@ const AuthPage = () => (
     <SignedOut>
       <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-10 shadow-lg">
         <header className="mb-8 space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">Municipalidad de El Bosque</p>
-          <h1 className="text-3xl font-semibold text-slate-900">Ingreso al panel territorial</h1>
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">DOM El Bosque</p>
+          <h1 className="text-3xl font-semibold text-slate-900">Ingreso a plataforma georreferenciada</h1>
         </header>
 
         <div className="space-y-4">

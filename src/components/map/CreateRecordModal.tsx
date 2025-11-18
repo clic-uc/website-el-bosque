@@ -148,9 +148,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] flex flex-col">
+        {/* Header fijo */}
+        <div className="flex-shrink-0 flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">Crear Nuevo Registro</h2>
           <button
             onClick={onClose}
@@ -162,7 +163,9 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Contenido scrolleable */}
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Selección de Mapa */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -338,6 +341,7 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

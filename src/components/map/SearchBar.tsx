@@ -44,11 +44,25 @@ const SearchBar: React.FC<SearchBarProps> = ({
       return;
     }
 
-    // Buscar por roleId (case insensitive)
+    const searchLower = value.toLowerCase();
+    
+    // Buscar por roleId, dirección y otros atributos (case insensitive)
     const results = shapes.filter((shape) => {
+      // Buscar en Rol SII
       const roleId = shape.attributes?.["Rol SII"] as string;
-      if (!roleId) return false;
-      return roleId.toLowerCase().includes(value.toLowerCase());
+      if (roleId && roleId.toLowerCase().includes(searchLower)) return true;
+      
+      // Buscar en todos los atributos del shape
+      if (shape.attributes) {
+        return Object.entries(shape.attributes).some(([key, value]) => {
+          // Excluir campos técnicos
+          if (key === 'recordId' || key === 'recordAttributeId') return false;
+          // Buscar en el valor del atributo
+          return String(value).toLowerCase().includes(searchLower);
+        });
+      }
+      
+      return false;
     });
 
     setSearchResults(results.slice(0, 10)); // Limitar a 10 resultados
@@ -97,16 +111,24 @@ const SearchBar: React.FC<SearchBarProps> = ({
             const recordId = shape.attributes?.recordId;
             const coords = shape.type === "point" ? shape.coordinates : null;
 
+            // Buscar qué atributo coincide con la búsqueda
+            const matchedAttribute = Object.entries(shape.attributes || {}).find(([key, value]) => {
+              if (key === 'recordId' || key === 'recordAttributeId' || key === 'Rol SII') return false;
+              return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+            });
+
             return (
               <div
                 key={shape.id}
                 onClick={() => handleSelectResult(shape)}
                 className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors"
               >
-                <div className="font-semibold text-gray-800">{roleId}</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Record ID: {String(recordId)}
-                </div>
+                <div className="font-semibold text-gray-800">{roleId || 'Sin Rol'}</div>
+                {matchedAttribute && (
+                  <div className="text-sm text-blue-600 mt-1">
+                    {matchedAttribute[0]}: {String(matchedAttribute[1])}
+                  </div>
+                )}
                 {coords && (
                   <div className="text-xs text-gray-400 mt-1">
                     📍 {coords[0].toFixed(4)}, {coords[1].toFixed(4)}

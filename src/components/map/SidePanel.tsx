@@ -1,7 +1,7 @@
 import {AnyShape} from "../../types/Shape.tsx";
 import {Attribute} from "../../types/Map.tsx";
-import {useEffect, useState} from "react";
-import {useUpdateRecord} from "../../hooks/useRecords";
+import {useEffect, useMemo, useState} from "react";
+import {useUpdateRecord, useRolePresenceMaps} from "../../hooks/useRecords";
 
 interface SidePanelProps {
     shape: AnyShape | null;
@@ -31,17 +31,32 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
     const rolSiiValue = (attributes["Rol SII"] as string) || "";
     const rolSiiIsInvalid = rolSiiValue && !isValidRolFormat(rolSiiValue);
 
+    // Presencia en otros mapas para este rol
+    const { data: rolePresence = [], isLoading: presenceLoading } = useRolePresenceMaps(
+        hasRole && isValidRolFormat(rolSiiValue) ? rolSiiValue : undefined
+    );
+    const otherMapsForRole = useMemo(() => {
+        if (!mapId) return rolePresence;
+        return rolePresence.filter(m => m.id !== mapId);
+    }, [rolePresence, mapId]);
+
     useEffect(() => {
         setAttributes(shape?.attributes || {});
         // Cargar comments y links desde los atributos del shape
         const shapeComments = shape?.attributes?.comments;
         const shapeLinks = shape?.attributes?.links;
+        const shapeOperations = shape?.attributes?.operations;
+        
+        // Debug: ver si las operaciones están llegando
+        if (hasRole && shapeOperations) {
+            console.log('Operaciones detectadas:', shapeOperations);
+        }
         
         setComments(typeof shapeComments === 'string' ? shapeComments : "");
         // Solo cargar links si es un array con la estructura correcta (title, url)
         const validLinks = Array.isArray(shapeLinks) && shapeLinks.length > 0 && 'title' in shapeLinks[0];
         setLinks(validLinks ? shapeLinks as Array<{ title: string; url: string }> : []);
-    }, [shape]);
+    }, [shape, hasRole]);
 
     const handleSave = async () => {
         if (isReadOnly) return;
@@ -51,7 +66,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
         const recordId = attributes.recordId as number;
         
         if (!recordId) {
-            alert('Error: No se puede actualizar. Registro sin ID.');
+            alert('No se puede actualizar. Registro no encontrado.');
             return;
         }
 
@@ -131,7 +146,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                         />
                         {rolSiiIsInvalid && (
                             <p className="text-xs text-red-600 mt-1 italic">
-                                ⚠️ Formato inválido: debe ser XXXXX-XXXXX (5 dígitos - 5 dígitos)
+                                Formato inválido: debe ser XXXXX-XXXXX
                             </p>
                         )}
                     </div>
@@ -300,12 +315,12 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                 )}
                 
                 {/* Secciones específicas de rol - Solo si el mapa tiene hasRole */}
-                {shape && hasRole && (
+                {shape && hasRole && rolSiiValue && (
                     <>
                         {/* Operaciones sobre el rol */}
-                        {attributes.operations && Array.isArray(attributes.operations) && attributes.operations.length > 0 && (
-                            <div className="flex-none bg-amber-50 p-3 rounded-lg border border-amber-200">
-                                <p className="text-sm font-semibold text-amber-900 mb-2">Operaciones</p>
+                        <div className="flex-none bg-amber-50 p-3 rounded-lg border border-amber-200">
+                            <p className="text-sm font-semibold text-amber-900 mb-2">Operaciones sobre el rol</p>
+                            {attributes.operations && Array.isArray(attributes.operations) && attributes.operations.length > 0 ? (
                                 <div className="space-y-2">
                                     {(attributes.operations as Array<{ operation: string; comment: string }>).map((op, index) => (
                                         <div key={index} className="bg-white p-2 rounded border border-amber-200">
@@ -314,21 +329,27 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <p className="text-xs text-amber-700">Sin operaciones registradas</p>
+                            )}
+                        </div>
 
                         {/* Otros mapas con este rol */}
                         <div className="flex-none bg-green-50 p-3 rounded-lg border border-green-200">
                             <p className="text-sm font-semibold text-green-900 mb-2">Presente en otros mapas</p>
-                            <div className="space-y-1">
-                                {/* MOCKUP: Lista de mapas */}
-                                <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
-                                    Obras Menores
+                            {presenceLoading ? (
+                                <div className="text-xs text-green-700">Cargando...</div>
+                            ) : otherMapsForRole.length > 0 ? (
+                                <div className="space-y-1">
+                                    {otherMapsForRole.map(m => (
+                                        <div key={m.id} className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                                            {m.name}
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
-                                    Recepción Final
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-xs text-green-700">No aparece en otros mapas</p>
+                            )}
                         </div>
                     </>
                 )}

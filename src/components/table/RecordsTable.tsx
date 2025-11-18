@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useDeleteRecord } from '../../hooks/useRecords';
-import type { GeographicalRecord } from '../../types/api.types';
+import { useDeleteRecord, useUpdateRecord } from '../../hooks/useRecords';
+import type { GeographicalRecord, UpdateRecordDto } from '../../types/api.types';
+import type { Map } from '../../types/Map';
 
 interface RecordsTableProps {
   records: GeographicalRecord[];
@@ -8,9 +9,11 @@ interface RecordsTableProps {
   mapId?: number;
   searchTerm?: string;
   hasRole?: boolean;
+  activeMap?: Map;
+  canEdit?: boolean;
 }
 
-const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = false }: RecordsTableProps) => {
+const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = false, activeMap, canEdit = false }: RecordsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   
@@ -20,8 +23,9 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
   // Estado para tracking qué filas están siendo editadas
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
 
-  // Hook para eliminar registro
+  // Hooks para mutaciones
   const deleteRecordMutation = useDeleteRecord();
+  const updateRecordMutation = useUpdateRecord();
 
   // Filtrar records por búsqueda
   const filteredRecords = useMemo(() => {
@@ -58,8 +62,14 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
   const endIndex = startIndex + itemsPerPage;
   const currentRecords = filteredRecords.slice(startIndex, endIndex);
 
-  // Obtener todas las columnas dinámicas del mapa activo
+  // Obtener todas las columnas dinámicas del esquema del mapa
   const columns = useMemo(() => {
+    // Si tenemos el activeMap, usar sus atributos definidos
+    if (activeMap?.attributes) {
+      return activeMap.attributes.map(attr => attr.id);
+    }
+    
+    // Fallback: buscar en los registros actuales (comportamiento anterior)
     const cols = new Set<string>();
     
     currentRecords.forEach(record => {
@@ -73,7 +83,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
     });
     
     return Array.from(cols);
-  }, [currentRecords, mapId]);
+  }, [activeMap, currentRecords, mapId]);
 
   // Obtener attributes específicos del mapa activo
   const getRecordAttributes = (record: GeographicalRecord) => {
@@ -117,18 +127,88 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
   };
 
   const saveRowChanges = (recordId: number) => {
-    // MOCKUP: solo loguear cambios
-    console.log('💾 Guardar cambios para record', recordId, editingCells[recordId]);
-    alert(`Cambios guardados (mockup):\n${JSON.stringify(editingCells[recordId], null, 2)}`);
+    const changes = editingCells[recordId];
+    if (!changes) return;
+
+    // Encontrar el record original
+    const originalRecord = records.find(r => r.id === recordId);
+    if (!originalRecord) return;
+
+    // Construir el DTO
+    const dto: UpdateRecordDto = {};
+
+    // Manejar cambios en roleId
+    if ('roleId' in changes && changes.roleId !== originalRecord.role?.roleId) {
+      dto.roleId = changes.roleId || undefined;
+    }
+
+    // Manejar cambios en coordenadas
+    if ('lat' in changes) {
+      const newLat = parseFloat(changes.lat);
+      if (!isNaN(newLat) && newLat !== originalRecord.lat) {
+        dto.lat = newLat;
+      }
+    }
+
+    if ('lon' in changes) {
+      const newLon = parseFloat(changes.lon);
+      if (!isNaN(newLon) && newLon !== originalRecord.lon) {
+        dto.lon = newLon;
+      }
+    }
+
+    // Manejar cambios en atributos del mapa
+    const attributeChanges: Record<string, unknown> = {};
+    const originalAttributes = getRecordAttributes(originalRecord);
     
-    // Limpiar estado de edición
-    const newEditingCells = { ...editingCells };
-    delete newEditingCells[recordId];
-    setEditingCells(newEditingCells);
-    
-    const newEditingRows = new Set(editingRows);
-    newEditingRows.delete(recordId);
-    setEditingRows(newEditingRows);
+    Object.keys(changes).forEach(key => {
+      // Ignorar campos especiales (roleId, lat, lon)
+      if (key !== 'roleId' && key !== 'lat' && key !== 'lon') {
+        const newValue = changes[key];
+        const oldValue = originalAttributes[key] !== undefined ? String(originalAttributes[key]) : '-';
+        
+        if (newValue !== oldValue) {
+          attributeChanges[key] = newValue === '-' ? null : newValue;
+        }
+      }
+    });
+
+    // Si hay cambios en atributos, agregarlos al DTO
+    if (Object.keys(attributeChanges).length > 0 && mapId) {
+      dto.recordAttributes = [{
+        mapId: mapId,
+        attributes: attributeChanges
+      }];
+    }
+
+    // Si no hay cambios, solo limpiar el estado de edición
+    if (Object.keys(dto).length === 0) {
+      revertRowChanges(recordId);
+      return;
+    }
+
+    // Hacer la petición al servidor
+    updateRecordMutation.mutate(
+      { id: recordId, dto },
+      {
+        onSuccess: () => {
+          console.log('✅ Registro actualizado exitosamente');
+          
+          // Limpiar estado de edición
+          const newEditingCells = { ...editingCells };
+          delete newEditingCells[recordId];
+          setEditingCells(newEditingCells);
+          
+          const newEditingRows = new Set(editingRows);
+          newEditingRows.delete(recordId);
+          setEditingRows(newEditingRows);
+        },
+        onError: (error) => {
+          console.error('❌ Error al actualizar registro:', error);
+          alert('Error al actualizar el registro. Por favor, intenta de nuevo.');
+        }
+      }
+    );
   };
 
   const revertRowChanges = (recordId: number) => {
@@ -211,9 +291,11 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                   {col}
                 </th>
               ))}
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap sticky right-0 bg-gray-100">
-                Acciones
-              </th>
+              {canEdit && (
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-b whitespace-nowrap sticky right-0 bg-gray-100">
+                  Acciones
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -229,7 +311,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                   {/* Rol SII - Editable */}
                   {hasRole && (
                     <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
-                      {editing ? (
+                      {editing && canEdit ? (
                         <input
                           type="text"
                           value={getCellValue(record.id, 'roleId', record.role?.roleId || '')}
@@ -239,8 +321,8 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                         />
                       ) : (
                         <span
-                          onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
-                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block"
+                          onClick={canEdit ? () => startEditingCell(record.id, 'roleId', record.role?.roleId || '') : undefined}
+                          className={canEdit ? "cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block" : "px-2 py-1 block"}
                         >
                           {record.role?.roleId || '-'}
                         </span>
@@ -250,7 +332,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                   
                   {/* Latitud - Editable */}
                   <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
-                    {editing ? (
+                    {editing && canEdit ? (
                       <input
                         type="text"
                         value={getCellValue(record.id, 'lat', record.lat?.toFixed(6) || '')}
@@ -260,8 +342,8 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                       />
                     ) : (
                       <span
-                        onClick={() => startEditingCell(record.id, 'lat', record.lat?.toFixed(6) || '')}
-                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-600"
+                        onClick={canEdit ? () => startEditingCell(record.id, 'lat', record.lat?.toFixed(6) || '') : undefined}
+                        className={canEdit ? "cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-600" : "px-2 py-1 block text-gray-600"}
                       >
                         {record.lat ? record.lat.toFixed(6) : '-'}
                       </span>
@@ -270,7 +352,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                   
                   {/* Longitud - Editable */}
                   <td className="px-4 py-3 text-sm border-b font-mono whitespace-nowrap">
-                    {editing ? (
+                    {editing && canEdit ? (
                       <input
                         type="text"
                         value={getCellValue(record.id, 'lon', record.lon?.toFixed(6) || '')}
@@ -280,8 +362,8 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                       />
                     ) : (
                       <span
-                        onClick={() => startEditingCell(record.id, 'lon', record.lon?.toFixed(6) || '')}
-                        className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-600"
+                        onClick={canEdit ? () => startEditingCell(record.id, 'lon', record.lon?.toFixed(6) || '') : undefined}
+                        className={canEdit ? "cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-600" : "px-2 py-1 block text-gray-600"}
                       >
                         {record.lon ? record.lon.toFixed(6) : '-'}
                       </span>
@@ -296,7 +378,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                         key={col}
                         className="px-4 py-3 text-sm border-b whitespace-nowrap"
                       >
-                        {editing ? (
+                        {editing && canEdit ? (
                           <input
                             type="text"
                             value={getCellValue(record.id, col, value)}
@@ -305,8 +387,8 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                           />
                         ) : (
                           <span
-                            onClick={() => startEditingCell(record.id, col, value)}
-                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-900"
+                            onClick={canEdit ? () => startEditingCell(record.id, col, value) : undefined}
+                            className={canEdit ? "cursor-pointer hover:bg-gray-100 px-2 py-1 rounded block text-gray-900" : "px-2 py-1 block text-gray-900"}
                           >
                             {value}
                           </span>
@@ -316,19 +398,22 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                   })}
                   
                   {/* Columna de acciones - sticky right */}
-                  <td className="px-4 py-3 border-b whitespace-nowrap sticky right-0 bg-inherit">
-                    {editing ? (
+                  {canEdit && (
+                    <td className="px-4 py-3 border-b whitespace-nowrap sticky right-0 bg-inherit">
+                      {editing ? (
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => saveRowChanges(record.id)}
-                          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                          disabled={updateRecordMutation.isPending}
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Guardar cambios"
                         >
-                          Guardar
+                          {updateRecordMutation.isPending ? 'Guardando...' : 'Guardar'}
                         </button>
                         <button
                           onClick={() => revertRowChanges(record.id)}
-                          className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
+                          disabled={updateRecordMutation.isPending}
+                          className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Cancelar cambios"
                         >
                           Cancelar
@@ -338,21 +423,24 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => startEditingCell(record.id, 'roleId', record.role?.roleId || '')}
-                          className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium rounded transition-colors"
+                          disabled={updateRecordMutation.isPending || deleteRecordMutation.isPending}
+                          className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Editar registro"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => deleteRecord(record.id)}
-                          className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded transition-colors"
+                          disabled={updateRecordMutation.isPending || deleteRecordMutation.isPending}
+                          className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Eliminar registro"
                         >
-                          Eliminar
+                          {deleteRecordMutation.isPending ? 'Eliminando...' : 'Eliminar'}
                         </button>
                       </div>
                     )}
-                  </td>
+                    </td>
+                  )}
                 </tr>
               );
             })}
