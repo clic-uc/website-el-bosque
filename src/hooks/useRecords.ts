@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { recordsService } from '../services/api.service';
 import { queryKeys } from '../lib/query-client';
-import type { CreateRecordDto, UpdateRecordDto, RecordsQueryParams, PaginatedRecordsParams } from '../types/api.types';
+import type { CreateRecordDto, UpdateRecordDto, RecordsQueryParams, PaginatedRecordsParams, GeographicalRecord } from '../types/api.types';
 
 /**
  * Hook para obtener todos los records
@@ -116,5 +116,41 @@ export const useRecordsFilters = (mapId: number) => {
       return recordsService.getFiltersForMap(mapId)
     },
     enabled: !!mapId && mapId > 0,
+  });
+}
+
+/**
+ * Hook para conocer en qué mapas aparece un rol (según recordAttributes de records con ese roleId)
+ */
+export const useRolePresenceMaps = (roleId?: string) => {
+  return useQuery({
+    queryKey: ['role-presence', roleId],
+    queryFn: async () => {
+      if (!roleId) return [] as Array<{ id: number; name: string; department: string; count: number }>;    
+      const all = await recordsService.getAll({ search: roleId });
+      const records = Array.isArray(all) ? all : (all as unknown as GeographicalRecord[]);
+
+      // Filtrar por coincidencia exacta de roleId (el backend usa prefijo)
+      const exact = records.filter(r => r.role?.roleId === roleId);
+
+      // Contar presencia por mapa desde recordAttributes
+      const mapCounts = new Map<number, { id: number; name: string; department: string; count: number }>();
+      exact.forEach(rec => {
+        rec.recordAttributes?.forEach(ra => {
+          const map = ra.map as unknown as { id: number; attributes: { name?: string }; department: string } | undefined;
+          if (!map) return;
+          const mapName = (map.attributes?.name as string) || `Mapa ${map.id}`;
+          const existing = mapCounts.get(map.id);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            mapCounts.set(map.id, { id: map.id, name: mapName, department: map.department, count: 1 });
+          }
+        });
+      });
+
+      return Array.from(mapCounts.values());
+    },
+    enabled: !!roleId && roleId.length > 0,
   });
 }

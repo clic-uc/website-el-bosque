@@ -14,6 +14,7 @@ import type { GeographicalRecord } from "../types/api.types";
 import AddMapModal from "../components/map/AddMapModal.tsx";
 import EditMapModal from "../components/map/EditMapModal.tsx";
 import CreateRecordModal from "../components/map/CreateRecordModal.tsx";
+import ExportRecordsModal from "../components/map/ExportRecordsModal";
 import type { Map } from "../types/Map.tsx";
 import { getRoleLabel, isAdmin, isEditor, useCurrentRole } from "../auth/role";
 import FilterSideBar from "../components/map/FilterSideBar.tsx";
@@ -78,6 +79,7 @@ const MapPage = () => {
 
   // State: Modal de crear registro
   const [isCreateRecordModalOpen, setCreateRecordModalOpen] = useState(false);
+  const [isExportModalOpen, setExportModalOpen] = useState(false);
   const [mapClickCallback, setMapClickCallback] = useState<((lat: number, lon: number) => void) | null>(null);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -170,9 +172,10 @@ const MapPage = () => {
   }, [recordsData, maps]);
 
   const handleToggleMap = (id: number) => {
-    setActiveMaps((prev) =>
-      prev.includes(id) ? prev.filter((mapId) => mapId !== id) : [...prev, id]
-    );
+    // Solo permitir un mapa activo a la vez
+    setActiveMaps([id]);
+    // Cerrar el SidePanel al cambiar de mapa
+    setSelectedShapeFromSearch(null);
   };
 
   const handleTogglePolygon = (polygonId: string) => {
@@ -379,6 +382,11 @@ const MapPage = () => {
             onMapClickCancel={handleMapClickCancel}
           />
         )}
+        <ExportRecordsModal
+          isOpen={isExportModalOpen}
+          onClose={() => setExportModalOpen(false)}
+          maps={mapsForDisplay}
+        />
       
       <SideBar
         maps={mapsForDisplay}
@@ -438,6 +446,16 @@ const MapPage = () => {
             
             {/* Lado derecho: Botones de acciones y dropdown de usuario */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setExportModalOpen(true)}
+                className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-colors hover:bg-indigo-700 flex items-center gap-2 whitespace-nowrap"
+                title="Exportar registros a CSV"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+                </svg>
+                Exportar
+              </button>
               {canManageMaps && (
                 <button
                   onClick={handleOpenCreateRecordModal}
@@ -522,7 +540,7 @@ const MapPage = () => {
                 activeMap={activeMap}
                 activeMaps={activeMaps}
                 activePolygons={activePolygons}
-                className="h-full w-full"
+                className="h-full w-full flex-1"
                 onCreateShape={handleCreateShape}
                 onUpdateShape={handleUpdateShape}
                 onDeleteShape={handleDeleteShape}
@@ -542,6 +560,8 @@ const MapPage = () => {
                 mapId={firstActiveMapId}
                 searchTerm={tableSearchTerm}
                 hasRole={activeMap?.hasRole}
+                activeMap={activeMap}
+                canEdit={canManageMaps}
               />
             )}
             <FilterSideBar isOpen={isFilterOpen} mapId={firstActiveMapId} updateFilters={(newFilters) => setFilters(newFilters)} />

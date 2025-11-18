@@ -126,7 +126,8 @@ const SideBar: React.FC<SideBarProps> = ({
                                                     className="group flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded"
                                                 >
                                                     <input
-                                                        type="checkbox"
+                                                        type="radio"
+                                                        name="activeMap"
                                                         checked={activeMaps.includes(map.id)}
                                                         onChange={() => onToggleMap(map.id)}
                                                         className="w-4 h-4 flex-shrink-0 mt-0.5"

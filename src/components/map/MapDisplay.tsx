@@ -51,7 +51,8 @@ const parsePointLatLng = (latLng: LatLng) => {
 const MapZoomHandler: React.FC<{
     selectedShapeFromSearch: AnyShape | null;
     onCleared: () => void;
-}> = ({ selectedShapeFromSearch, onCleared }) => {
+    onShapeSelect: (shape: AnyShape) => void;
+}> = ({ selectedShapeFromSearch, onCleared, onShapeSelect }) => {
     const map = useMap();
 
     useEffect(() => {
@@ -63,12 +64,15 @@ const MapZoomHandler: React.FC<{
                 duration: 1,
             });
             
+            // Seleccionar el shape para abrir el SidePanel
+            onShapeSelect(selectedShapeFromSearch);
+            
             // Limpiar después de hacer zoom
             setTimeout(() => {
                 onCleared();
             }, 100);
         }
-    }, [selectedShapeFromSearch, map, onCleared]);
+    }, [selectedShapeFromSearch, map, onCleared, onShapeSelect]);
 
     return null;
 };
@@ -134,6 +138,12 @@ const MapDisplay: React.FC<MapDisplayProps> = (
             selectedShapeCache.current = null;
         }
     }, [selectedShape]);
+    
+    // Cerrar el SidePanel cuando cambia el mapa activo
+    useEffect(() => {
+        setSelectedShape(null);
+        selectedShapeCache.current = null;
+    }, [activeMap?.id]);
     
     // Preserve selectedShape when maps update (shapes array recreated)
     // If selectedShape exists but is stale (different instance with same ID),
@@ -473,6 +483,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 <MapZoomHandler
                     selectedShapeFromSearch={selectedShapeFromSearch || null}
                     onCleared={onSearchShapeCleared || (() => {})}
+                    onShapeSelect={setSelectedShape}
                 />
                 
                 {/* Handler para clics en el mapa (crear registros) */}
