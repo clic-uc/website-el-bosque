@@ -6,11 +6,13 @@ import type { UpdateRoleDto, RecordsQueryParams } from '../types/api.types';
 /**
  * Hook para obtener todos los roles
  * Parámetros opcionales: search para filtrar por texto
+ * enabled: false para deshabilitar la query (útil en autocomplete)
  */
-export const useRoles = (params?: RecordsQueryParams) => {
+export const useRoles = (params?: RecordsQueryParams, enabled = true) => {
   return useQuery({
     queryKey: queryKeys.roles.list(params),
     queryFn: () => rolesService.getAll(params),
+    enabled,
   });
 };
 

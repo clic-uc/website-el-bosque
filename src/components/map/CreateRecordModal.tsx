@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Map } from '../../types/Map';
 import { useCreateRecord } from '../../hooks/useRecords';
+import { useRoles, useUpdateRole } from '../../hooks/useRoles';
+import type { Role } from '../../types/api.types';
 
 type CreateRecordModalProps = {
   isOpen: boolean;
@@ -25,9 +27,31 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
   const [links, setLinks] = useState<Array<{ title: string; url: string }>>([]);
   const [isSelectingOnMap, setIsSelectingOnMap] = useState(false);
 
+  // Role state
+  const [roleInput, setRoleInput] = useState<string>('');
+  const [roleSearch, setRoleSearch] = useState<string>('');
+  const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const roleInputRef = useRef<HTMLInputElement>(null);
+
   const createRecordMutation = useCreateRecord();
+  const updateRoleMutation = useUpdateRole();
 
   const selectedMap = maps.find(m => m.id === selectedMapId);
+
+  // Debounce role search
+  useEffect(() => {
+    const timer = setTimeout(() => setRoleSearch(roleInput), 300);
+    return () => clearTimeout(timer);
+  }, [roleInput]);
+
+  const roleSearchEnabled = !!selectedMap?.hasRole && roleSearch.length >= 1;
+  const { data: rolesQueryData } = useRoles(
+    { search: roleSearch, page: 1, limit: 8 },
+    roleSearchEnabled,
+  );
+  // Backend returns paginated { data: Role[], meta: {...} }
+  const roleSuggestions: Role[] = (rolesQueryData as { data?: Role[] })?.data ?? [];
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -37,6 +61,10 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
       setLon('');
       setAttributes({});
       setIsSelectingOnMap(false);
+      setRoleInput('');
+      setRoleSearch('');
+      setShowRoleSuggestions(false);
+      setSelectedRole(null);
       if (onMapClickCancel) {
         onMapClickCancel();
       }
@@ -58,6 +86,16 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
     setIsSelectingOnMap(false);
     if (onMapClickCancel) {
       onMapClickCancel();
+    }
+  };
+
+  const handleSelectRole = (role: Role) => {
+    setRoleInput(role.roleId);
+    setSelectedRole(role);
+    setShowRoleSuggestions(false);
+    if (role.lat != null && role.lon != null) {
+      setLat(String(role.lat));
+      setLon(String(role.lon));
     }
   };
 
@@ -86,9 +124,11 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
 
     try {
       // Crear payload sin roleId (es opcional en el backend)
+      const trimmedRoleId = selectedMap?.hasRole && roleInput.trim() ? roleInput.trim() : undefined;
       const payload = {
         lat: latNum,
         lon: lonNum,
+        roleId: trimmedRoleId,
         comments: comments.trim() || undefined,
         links: links.length > 0 ? links : undefined,
         recordAttributes: [
@@ -100,6 +140,14 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
       };
       
       await createRecordMutation.mutateAsync(payload as Parameters<typeof createRecordMutation.mutateAsync>[0]);
+
+      // Actualizar coordenadas del rol (o crearlo si fue generado por el upsert del backend)
+      if (trimmedRoleId) {
+        await updateRoleMutation.mutateAsync({
+          roleId: trimmedRoleId,
+          dto: { lat: latNum, lon: lonNum },
+        });
+      }
 
       alert('Registro creado exitosamente');
       onClose();
@@ -185,6 +233,57 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Rol (solo para mapas con hasRole) */}
+          {selectedMap?.hasRole && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rol
+              </label>
+              <div className="relative">
+                <input
+                  ref={roleInputRef}
+                  type="text"
+                  value={roleInput}
+                  onChange={(e) => {
+                    setRoleInput(e.target.value);
+                    setSelectedRole(null);
+                    setShowRoleSuggestions(true);
+                  }}
+                  onFocus={() => roleInput.length >= 1 && setShowRoleSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowRoleSuggestions(false), 150)}
+                  placeholder="Ej: 00001-02024"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-24 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {roleInput.trim() && (
+                  <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs px-1.5 py-0.5 rounded font-medium ${selectedRole ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {selectedRole ? 'existente' : 'nuevo'}
+                  </span>
+                )}
+                {showRoleSuggestions && roleSuggestions.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {roleSuggestions.map((role) => (
+                      <li
+                        key={role.roleId}
+                        onMouseDown={() => handleSelectRole(role)}
+                        className="px-4 py-2.5 text-sm hover:bg-blue-50 cursor-pointer flex items-center justify-between gap-2"
+                      >
+                        <span className="font-medium truncate">{role.roleId}</span>
+                        {role.lat != null && role.lon != null && (
+                          <span className="flex-shrink-0 text-xs text-gray-500">📍 con coordenadas</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {selectedRole?.lat != null && selectedRole?.lon != null && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Coordenadas del rol cargadas automáticamente
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Coordenadas */}
           <div>
@@ -334,10 +433,14 @@ const CreateRecordModal: React.FC<CreateRecordModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={createRecordMutation.isPending}
+              disabled={createRecordMutation.isPending || updateRoleMutation.isPending}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createRecordMutation.isPending ? 'Creando...' : 'Crear Registro'}
+              {createRecordMutation.isPending
+                ? 'Creando...'
+                : updateRoleMutation.isPending
+                ? 'Guardando rol...'
+                : 'Crear Registro'}
             </button>
           </div>
         </form>
