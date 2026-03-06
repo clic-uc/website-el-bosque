@@ -103,7 +103,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
     const headers = parsedCsv.headers.map(header => headerMappings[header] ? headerMappings[header] : header);
     csvContent.push(headers.join(delimiter));
     csvContent.push(parsedCsv.rowsText);
-    console.log(csvContent);
+    // console.log(csvContent);
     const mappedCsvFile = new File([csvContent.join('\r\n')], selectedFile.name, { type: 'text/csv' });
 
     importRecords(

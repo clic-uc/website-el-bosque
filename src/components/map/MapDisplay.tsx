@@ -243,7 +243,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 updateRelatedRecords,
             });
 
-            console.log(`✅ Updated ${response.data.updated} record(s)`);
+            // console.log(`✅ Updated ${response.data.updated} record(s)`);
 
             // Invalidar query para recargar datos
             queryClient.invalidateQueries({ queryKey: ["records"] });

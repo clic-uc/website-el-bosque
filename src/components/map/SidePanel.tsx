@@ -49,7 +49,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
         
         // Debug: ver si las operaciones están llegando
         if (hasRole && shapeOperations) {
-            console.log('Operaciones detectadas:', shapeOperations);
+            // console.log('Operaciones detectadas:', shapeOperations);
         }
         
         setComments(typeof shapeComments === 'string' ? shapeComments : "");
@@ -76,7 +76,7 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
 
         try {
             // Actualizar el Record con sus recordAttributes, comments y links en el backend
-            console.log('Patch record payload:', { 
+            // console.log('Patch record payload:', { 
                 id: recordId, 
                 mapId,
                 comments,
