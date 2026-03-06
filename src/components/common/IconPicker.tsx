@@ -55,7 +55,7 @@ const IconPicker = ({ isOpen, onClose, onSelect, currentIcon = 'building-2', cur
     
     // Usar Object.keys para iterar sobre las exportaciones del módulo
     const lucideKeys = Object.keys(LucideIcons);
-    console.log(`📦 Total exports de Lucide: ${lucideKeys.length}`);
+    // console.log(`📦 Total exports de Lucide: ${lucideKeys.length}`);
     
     lucideKeys.forEach((key) => {
       // Filtrar solo los componentes de iconos válidos
@@ -86,7 +86,7 @@ const IconPicker = ({ isOpen, onClose, onSelect, currentIcon = 'building-2', cur
     });
     
     const uniqueIcons = Array.from(iconNamesSet).sort();
-    console.log(`🎨 Cargados ${uniqueIcons.length} iconos únicos de Lucide`);
+    // console.log(`🎨 Cargados ${uniqueIcons.length} iconos únicos de Lucide`);
     
     return uniqueIcons;
   }, []);
@@ -235,7 +235,7 @@ const IconPicker = ({ isOpen, onClose, onSelect, currentIcon = 'building-2', cur
                   type="button"
                   key={iconName}
                   onClick={() => {
-                    console.log('Icono seleccionado:', iconName);
+                    // console.log('Icono seleccionado:', iconName);
                     setSelectedIcon(iconName);
                   }}
                   className={`

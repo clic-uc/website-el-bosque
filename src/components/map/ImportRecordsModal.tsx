@@ -5,6 +5,7 @@ import {ImSpinner8} from "react-icons/im";
 import ColumnSelectMenu from "./ColumnSelectMenu.tsx";
 import { downloadCsv } from '../../utils/csvDownload';
 import type { BulkImportSummary } from '../../types/api.types';
+import { DuplicateStrategy } from '../../types/api.types';
 
 interface ImportRecordsModalProps {
   maps: Map[];
@@ -35,6 +36,7 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
   const [headerMappings, setHeaderMappings] = useState<Record<string, string | null>>({});
   const [parsedCsv, setParsedCsv] = useState<{ headers: string[]; rows: string[][]; total: number, rowsText: string } | null>(null);
   const [delimiter, setDelimiter] = useState<string>(',');
+  const [duplicateStrategy, setDuplicateStrategy] = useState<DuplicateStrategy>(DuplicateStrategy.ERROR);
 
   // Forzar el mapa seleccionado cuando se indique uno fijo
   useEffect(() => {
@@ -101,11 +103,11 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
     const headers = parsedCsv.headers.map(header => headerMappings[header] ? headerMappings[header] : header);
     csvContent.push(headers.join(delimiter));
     csvContent.push(parsedCsv.rowsText);
-    console.log(csvContent);
+    // console.log(csvContent);
     const mappedCsvFile = new File([csvContent.join('\r\n')], selectedFile.name, { type: 'text/csv' });
 
     importRecords(
-      { mapId: selectedMapId, file: mappedCsvFile, delimiter},
+      { mapId: selectedMapId, file: mappedCsvFile, delimiter, duplicateStrategy },
       {
         onSuccess: (data) => {
           setImportResult(data);
@@ -213,6 +215,29 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
             </select>
           </div>
 
+          {/* Selector de estrategia de duplicados */}
+          <div>
+            <label htmlFor="duplicate-strategy-select" className="block text-sm font-medium text-gray-700 mb-2">
+              Manejo de Duplicados
+            </label>
+            <select
+              id="duplicate-strategy-select"
+              value={duplicateStrategy}
+              onChange={(e) => setDuplicateStrategy(e.target.value as DuplicateStrategy)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isPending}
+            >
+              <option value={DuplicateStrategy.ERROR}>Error - Fallar si hay duplicados</option>
+              <option value={DuplicateStrategy.SKIP}>Omitir - Ignorar registros duplicados</option>
+              <option value={DuplicateStrategy.REPLACE}>Reemplazar - Actualizar registros duplicados</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-600">
+              {duplicateStrategy === DuplicateStrategy.ERROR && 'La importación fallará si se detectan registros duplicados'}
+              {duplicateStrategy === DuplicateStrategy.SKIP && 'Los registros duplicados serán ignorados y no se importarán'}
+              {duplicateStrategy === DuplicateStrategy.REPLACE && 'Los registros duplicados serán reemplazados con los nuevos datos'}
+            </p>
+          </div>
+
           {/* Mensajes de Error */}
           {(errorMessage || isError) && (
             <div className="bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded-md text-sm">
@@ -238,6 +263,27 @@ const ImportRecordsModal: React.FC<ImportRecordsModalProps> = ({ maps, isOpen, o
                   <p className="text-lg font-bold text-red-600">{importResult.failed}</p>
                 </div>
               </div>
+              
+              {/* Mostrar contadores de duplicados si existen */}
+              {(importResult.skipped || importResult.replaced) && (
+                <div className="pt-2 border-t border-blue-200">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Manejo de Duplicados:</p>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {importResult.skipped !== undefined && importResult.skipped > 0 && (
+                      <div>
+                        <p className="text-gray-600">Omitidos</p>
+                        <p className="text-lg font-bold text-yellow-600">{importResult.skipped}</p>
+                      </div>
+                    )}
+                    {importResult.replaced !== undefined && importResult.replaced > 0 && (
+                      <div>
+                        <p className="text-gray-600">Reemplazados</p>
+                        <p className="text-lg font-bold text-orange-600">{importResult.replaced}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               {importResult.failedRowsCsv && importResult.failed > 0 && (
                 <div className="pt-2 border-t border-blue-200">

@@ -192,7 +192,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
       { id: recordId, dto },
       {
         onSuccess: () => {
-          console.log('✅ Registro actualizado exitosamente');
+          // console.log('✅ Registro actualizado exitosamente');
           
           // Limpiar estado de edición
           const newEditingCells = { ...editingCells };
@@ -226,7 +226,7 @@ const RecordsTable = ({ records, isLoading, mapId, searchTerm = '', hasRole = fa
     if (confirm(`¿Estás seguro de que quieres eliminar el registro ${recordId}?`)) {
       deleteRecordMutation.mutate(recordId, {
         onSuccess: () => {
-          console.log('✅ Registro eliminado exitosamente');
+          // console.log('✅ Registro eliminado exitosamente');
         },
         onError: (error) => {
           console.error('❌ Error al eliminar registro:', error);

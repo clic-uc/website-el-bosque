@@ -99,8 +99,18 @@ export const useImportRecords = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ mapId, file, delimiter }: { mapId: number; file: File, delimiter: string }) =>
-      recordsService.importForMap(mapId, file, delimiter),
+    mutationFn: ({ 
+      mapId, 
+      file, 
+      delimiter, 
+      duplicateStrategy 
+    }: { 
+      mapId: number; 
+      file: File; 
+      delimiter: string;
+      duplicateStrategy?: string;
+    }) =>
+      recordsService.importForMap(mapId, file, delimiter, duplicateStrategy),
     onSuccess: () => {
       // Invalidar todas las listas de records después de importar
       queryClient.invalidateQueries({ queryKey: queryKeys.records.lists() });
@@ -112,7 +122,7 @@ export const useRecordsFilters = (mapId: number) => {
   return useQuery({
     queryKey: queryKeys.records.filters(mapId),
     queryFn: () => {
-      console.log("Querying filters for mapId:", mapId);
+      // console.log("Querying filters for mapId:", mapId);
       return recordsService.getFiltersForMap(mapId)
     },
     enabled: !!mapId && mapId > 0,

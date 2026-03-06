@@ -1,7 +1,7 @@
 import {Map} from "../../types/Map";
 import {AnyShape, PointShape} from "../../types/Shape.tsx";
 import {useConfig} from "../../hooks/useConfig.tsx";
-import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer, useMap, useMapEvents} from "react-leaflet";
+import {FeatureGroup, MapContainer, Marker, Polygon, Polyline, TileLayer, useMap, useMapEvents, ZoomControl} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import {EditControl} from "react-leaflet-draw";
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -243,7 +243,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 updateRelatedRecords,
             });
 
-            console.log(`✅ Updated ${response.data.updated} record(s)`);
+            // console.log(`✅ Updated ${response.data.updated} record(s)`);
 
             // Invalidar query para recargar datos
             queryClient.invalidateQueries({ queryKey: ["records"] });
@@ -478,6 +478,7 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 zoom={14}
                 bounds={[[config.mapBounds.minLatitude, config.mapBounds.minLongitude], [config.mapBounds.maxLatitude, config.mapBounds.maxLongitude]]}
                 style={{ width: '100%', height: '100%' }}
+                zoomControl={false}
             >
                 {/* Handler para zoom desde búsqueda */}
                 <MapZoomHandler
@@ -492,6 +493,9 @@ const MapDisplay: React.FC<MapDisplayProps> = (
                 <TileLayer
                     url={config.mapUrl}
                 />
+                
+                {/* Control de zoom en la esquina inferior izquierda */}
+                <ZoomControl position="bottomleft" />
                 
                 {/* Capas de polígonos GeoJSON */}
                 <PolygonLayers activePolygons={activePolygons} />

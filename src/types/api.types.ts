@@ -20,6 +20,7 @@ export interface MapEntity {
   hasRole: boolean;
   icon?: string;
   iconColor?: string;
+  uniqueKeys?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +67,7 @@ export interface CreateMapDto {
   department: Department;
   attributes: Record<string, unknown>;
   hasRole?: boolean;
+  uniqueKeys?: string[];
 }
 
 export interface UpdateMapDto {
@@ -75,6 +77,7 @@ export interface UpdateMapDto {
   hasRole?: boolean;
   icon?: string;
   iconColor?: string;
+  uniqueKeys?: string[];
 }
 
 export interface CreateRoleDto {
@@ -159,6 +162,12 @@ export interface PaginatedRecordsParams extends Omit<RecordsQueryParams, 'page' 
 // }
 
 // Import/Bulk
+export enum DuplicateStrategy {
+  SKIP = 'skip',
+  REPLACE = 'replace',
+  ERROR = 'error',
+}
+
 export interface BulkImportError {
   row: number;
   message: string;
@@ -171,6 +180,10 @@ export interface BulkImportSummary {
   errors: BulkImportError[];
   /** CSV con las filas que fallaron (opcional) */
   failedRowsCsv?: string;
+  /** Cantidad de registros omitidos por duplicados */
+  skipped?: number;
+  /** Cantidad de registros reemplazados por duplicados */
+  replaced?: number;
 }
 
 export interface SeedSummary {
