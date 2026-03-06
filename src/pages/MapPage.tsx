@@ -330,7 +330,6 @@ const MapPage = () => {
       <div className="flex items-center justify-center w-screen h-screen">
         <div className="text-center">
           <p className="text-lg text-gray-700">Cargando mapas...</p>
-          <p className="text-sm text-gray-500 mt-2">Conectando con el backend...</p>
         </div>
       </div>
     );

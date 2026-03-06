@@ -5,7 +5,6 @@ import type {
   CreateMapDto,
   UpdateMapDto,
   Role,
-  CreateRoleDto,
   UpdateRoleDto,
   GeographicalRecord,
   CreateRecordDto,
@@ -57,11 +56,6 @@ export const rolesService = {
 
   getById: async (roleId: string): Promise<Role> => {
     const { data } = await apiClient.get<Role>(API_ENDPOINTS.roleById(roleId));
-    return data;
-  },
-
-  create: async (dto: CreateRoleDto): Promise<Role> => {
-    const { data } = await apiClient.post<Role>(API_ENDPOINTS.roles, dto);
     return data;
   },
 
@@ -124,11 +118,16 @@ export const recordsService = {
     await apiClient.delete(API_ENDPOINTS.recordById(id));
   },
 
-  importForMap: async (mapId: number, file: File, delimiter: string): Promise<BulkImportSummary> => {
+  importForMap: async (
+    mapId: number, 
+    file: File, 
+    delimiter: string, 
+    duplicateStrategy?: string
+  ): Promise<BulkImportSummary> => {
     const formData = new FormData();
     formData.append('file', file);
     const { data } = await apiClient.post<BulkImportSummary>(
-      API_ENDPOINTS.recordsImport(mapId, delimiter),
+      API_ENDPOINTS.recordsImport(mapId, delimiter, duplicateStrategy),
       formData,
       {
         headers: {

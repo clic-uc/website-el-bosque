@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rolesService } from '../services/api.service';
 import { queryKeys } from '../lib/query-client';
-import type { CreateRoleDto, UpdateRoleDto, RecordsQueryParams } from '../types/api.types';
+import type { UpdateRoleDto, RecordsQueryParams } from '../types/api.types';
 
 /**
  * Hook para obtener todos los roles
@@ -22,21 +22,6 @@ export const useRole = (roleId: string) => {
     queryKey: queryKeys.roles.detail(roleId),
     queryFn: () => rolesService.getById(roleId),
     enabled: !!roleId,
-  });
-};
-
-/**
- * Hook para crear un role
- */
-export const useCreateRole = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (dto: CreateRoleDto) => rolesService.create(dto),
-    onSuccess: () => {
-      // Invalidar todas las listas de roles
-      queryClient.invalidateQueries({ queryKey: queryKeys.roles.lists() });
-    },
   });
 };
 

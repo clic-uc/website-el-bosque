@@ -5,7 +5,7 @@
 
 export const API_CONFIG = {
   // Base URL del backend - cambiar según entorno
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   
   // Timeout por defecto (ms)
   timeout: 120000,
@@ -29,7 +29,13 @@ export const API_ENDPOINTS = {
   // Records
   records: '/records',
   recordById: (id: number) => `/records/${id}`,
-  recordsImport: (mapId: number, delimiter: string) => `/records/import/map/${mapId}?delimiter=${encodeURIComponent(delimiter)}`,
+  recordsImport: (mapId: number, delimiter: string, duplicateStrategy?: string) => {
+    let url = `/records/import/map/${mapId}?delimiter=${encodeURIComponent(delimiter)}`;
+    if (duplicateStrategy) {
+      url += `&duplicateStrategy=${encodeURIComponent(duplicateStrategy)}`;
+    }
+    return url;
+  },
   filtersForMap: (mapId: number) => `/records/filters/map/${mapId}`,
 
   // Seeds

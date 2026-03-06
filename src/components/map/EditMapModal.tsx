@@ -26,6 +26,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
   const [hasRole, setHasRole] = useState<boolean>(false);
   const [icon, setIcon] = useState<string>('building-2');
   const [iconColor, setIconColor] = useState<string>('#6b7280');
+  const [uniqueKeys, setUniqueKeys] = useState<string[]>([]);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState<boolean>(false);
   const [isImportOpen, setIsImportOpen] = useState<boolean>(false);
 
@@ -42,6 +43,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
       setHasRole(map.hasRole || false);
       setIcon(map.icon || 'building-2');
       setIconColor(map.iconColor || '#6b7280');
+      setUniqueKeys(map.uniqueKeys || []);
     }
   }, [map]);
 
@@ -63,6 +65,7 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
         name: mapName,
         fields: fieldsArray,
       },
+      uniqueKeys: !hasRole && uniqueKeys.length > 0 ? uniqueKeys : undefined,
     };
 
     updateMapMutation.mutate({ id: mapId, dto: updatedMap }, {
@@ -190,6 +193,46 @@ const EditMapModal: React.FC<EditMapModalProps> = ({
                 Este mapa incluye Rol SII
               </label>
             </div>
+
+            {/* Selector de uniqueKeys (solo cuando hasRole es false) */}
+            {!hasRole && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Campos únicos (opcional)
+                </label>
+                <p className="text-xs text-gray-600 mb-2">
+                  Selecciona los campos que identifican registros únicos. Se usará para detectar duplicados al importar.
+                </p>
+                <div className="space-y-2">
+                  {attributeFields.split('\n').map(field => field.trim()).filter(field => field).map((field) => (
+                    <div key={field} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`unique-${field}`}
+                        checked={uniqueKeys.includes(field)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setUniqueKeys([...uniqueKeys, field]);
+                          } else {
+                            setUniqueKeys(uniqueKeys.filter(k => k !== field));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        disabled={updateMapMutation.isPending || deleteMapMutation.isPending}
+                      />
+                      <label htmlFor={`unique-${field}`} className="ml-2 text-sm text-gray-700">
+                        {field}
+                      </label>
+                    </div>
+                  ))}
+                  {attributeFields.split('\n').map(field => field.trim()).filter(field => field).length === 0 && (
+                    <p className="text-xs text-gray-500 italic">
+                      Primero define los campos de atributos arriba
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Editor de Ícono */}
             <div>

@@ -263,6 +263,27 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar al usuario "${userName}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/admin/users/${userId}`);
+      setUsers((prev) => prev.filter((user) => user.id !== userId));
+      setFeedback({
+        type: 'info',
+        message: 'Usuario eliminado exitosamente.',
+      });
+    } catch (error) {
+      console.error('[Admin] Failed to delete user', error);
+      setFeedback({
+        type: 'error',
+        message: 'Error al eliminar el usuario.',
+      });
+    }
+  };
+
   const handleResetRoster = () => {
     setSearchSession((prev) => prev + 1);
     void fetchRoster(0);
@@ -495,7 +516,7 @@ export default function AdminDashboard() {
                         className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
                       >
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
+                          <div className="flex-1">
                             <h3 className="text-base font-semibold text-slate-900">
                               {fullName}
                             </h3>
@@ -503,9 +524,21 @@ export default function AdminDashboard() {
                               {user.email ?? 'Sin correo registrado'}
                             </p>
                           </div>
-                          <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-700">
-                            {roleLabel}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-700">
+                              {roleLabel}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(user.id, fullName)}
+                              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white p-2 text-red-600 transition hover:bg-red-50 hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                              title="Eliminar usuario"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                         <div className="mt-4 border-t border-slate-100 pt-4">
                           <RoleActions
