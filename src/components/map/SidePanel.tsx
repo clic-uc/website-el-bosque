@@ -75,18 +75,6 @@ const SidePanel: React.FC<SidePanelProps> = ({shape, mapAttributes, open, cancel
         const { recordId: _, recordAttributeId: __, "Rol SII": ___, ...recordAttributesData } = attributes;
 
         try {
-            // Actualizar el Record con sus recordAttributes, comments y links en el backend
-            // console.log('Patch record payload:', { 
-                id: recordId, 
-                mapId,
-                comments,
-                links,
-                recordAttributes: [{
-                    mapId: mapId,
-                    attributes: recordAttributesData
-                }]
-            });
-            
             await updateRecordMutation.mutateAsync({
                 id: recordId,
                 dto: {
